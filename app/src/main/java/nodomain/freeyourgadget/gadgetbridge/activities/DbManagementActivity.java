@@ -130,12 +130,11 @@ public class DbManagementActivity extends AbstractGBActivity {
                 boolean InternetOn = isNetworkConnected();
                 if(InternetOn == true) {
 
-                    syncDB();
+                     syncDB();
                 }
                 else {
                     Toast.makeText(getApplicationContext(),"NO INTERNET CONNECTION", Toast.LENGTH_LONG).show();
                 }
-
             }
         });
         // save manual input token
@@ -285,11 +284,12 @@ public class DbManagementActivity extends AbstractGBActivity {
 
                 // need to check how many devices OR any new devices added?
                 List deviceList = queryDevices();
-                //Toast.makeText(this, "DEVICE LIST" + deviceList.toString(), Toast.LENGTH_LONG).show();
+                // Toast.makeText(this, "DEVICE LIST" + deviceList.toString(), Toast.LENGTH_LONG).show();
                 // need to create a new table to save sync data to ptop work
                 boolean tableExists = false;
                 /* get cursor on it */
                 try {
+                    Toast.makeText(this, "DEVICE LIST", Toast.LENGTH_LONG).show();
                     db.query("NETWORK_SYNC_TIMESTAMP", null,
                             null, null, null, null, null);
                     tableExists = true;
