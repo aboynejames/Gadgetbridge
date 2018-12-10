@@ -128,41 +128,9 @@ public class DbManagementActivity extends AbstractGBActivity {
             }
         });
 
-        // need to query deviceData saved? If yes only show sync button
-        firstDBButton = findViewById(R.id.firstDBButton);
-        TextView tv = (TextView) findViewById(R.id.syncText);
-        tv.setText("Please enter token and publickey below then click on FIRST STEP");
-        firstDBButton.setOnClickListener(new View.OnClickListener() {
-            @Override
-            public void onClick(View v) {
-                // first check there is interenet connection
-                boolean InternetOn = isNetworkConnected();
-                if(InternetOn == true) {
-                    Toast.makeText(getApplicationContext(),"FIRST SETUP CLICKED", Toast.LENGTH_LONG).show();
-                    firstSettingsDB();
-                }
-                else {
-                    Toast.makeText(getApplicationContext(),"NO INTERNET CONNECTION", Toast.LENGTH_LONG).show();
-                }
-            }
-        });
+        // has the first time setup been run, check mobiledb
+        startStatus();
 
-        syncDBButton = findViewById(R.id.syncDBButton);
-        syncDBButton.setVisibility(View.INVISIBLE);
-        syncDBButton.setOnClickListener(new View.OnClickListener() {
-            @Override
-            public void onClick(View v) {
-                // first check there is interenet connection
-                boolean InternetOn = isNetworkConnected();
-                if(InternetOn == true) {
-
-                     syncDB();
-                }
-                else {
-                    Toast.makeText(getApplicationContext(),"NO INTERNET CONNECTION", Toast.LENGTH_LONG).show();
-                }
-            }
-        });
         // save manual input token
         tokenButton = findViewById(R.id.tokenButton);
         tokenButton.setOnClickListener(new View.OnClickListener() {
@@ -172,7 +140,7 @@ public class DbManagementActivity extends AbstractGBActivity {
                 EditText editToken = (EditText)findViewById(R.id.tokenText);
                 String tokentoSave = editToken.getText().toString();
                 // save to sqlite
-                checkSaveToken(tokentoSave, "1");
+                SaveUpdateToken(tokentoSave, "1");
 
             }
         });
@@ -186,11 +154,13 @@ public class DbManagementActivity extends AbstractGBActivity {
                 EditText editToken = (EditText)findViewById(R.id.publickey);
                 String keytoSave = editToken.getText().toString();
                 // save to sqlite
-                checkSaveToken(keytoSave, "2");
+                SaveUpdateToken(keytoSave, "2");
 
             }
         });
 
+        tokenButton.setVisibility(View.INVISIBLE);
+        pubkeyButton.setVisibility(View.INVISIBLE);
 
         int oldDBVisibility = hasOldActivityDatabase() ? View.VISIBLE : View.GONE;
 
@@ -263,20 +233,80 @@ public class DbManagementActivity extends AbstractGBActivity {
         }
     }
 
+    // check for first time use
+    private void startStatus() {
+
+        String status = queryToken("3");
+        Toast.makeText(getApplicationContext(),"status start: " + status, Toast.LENGTH_LONG).show();
+        if(Objects.equals(status, "true")) {
+            // display sync button
+            firstDBButton = findViewById(R.id.firstDBButton);
+            firstDBButton.setVisibility(View.INVISIBLE);
+            syncDBButton = findViewById(R.id.syncDBButton);
+            syncDBButton.setOnClickListener(new View.OnClickListener() {
+                @Override
+                public void onClick(View v) {
+                    // first check there is interenet connection
+                    boolean InternetOn = isNetworkConnected();
+                    if(InternetOn == true) {
+
+                        syncDB();
+                    }
+                    else {
+                        Toast.makeText(getApplicationContext(),"NO INTERNET CONNECTION", Toast.LENGTH_LONG).show();
+                    }
+                }
+            });
+        }
+        else {
+
+            // need to query deviceData saved? If yes only show First Setup button
+            syncDBButton = findViewById(R.id.syncDBButton);
+            syncDBButton.setVisibility(View.INVISIBLE);
+            // TextView tv = (TextView) findViewById(R.id.firstDBButton);
+            // tv.setText("Please enter token and publickey below then click on FIRST STEP");
+            firstDBButton = findViewById(R.id.firstDBButton);
+            firstDBButton.setOnClickListener(new View.OnClickListener() {
+                @Override
+                public void onClick(View v) {
+                    // first check there is interenet connection
+                    boolean InternetOn = isNetworkConnected();
+                    if(InternetOn == true) {
+                        Toast.makeText(getApplicationContext(),"FIRST SETUP CLICKED", Toast.LENGTH_LONG).show();
+                        firstSettingsDB();
+                    }
+                    else {
+                        Toast.makeText(getApplicationContext(),"NO INTERNET CONNECTION", Toast.LENGTH_LONG).show();
+                    }
+                }
+            });
+        }
+    }
+
     // first time connection to network
     private void firstSettingsDB() {
         // setup db tables not standard in GB
-        // query device and device att tables and sync to network
-        // PUBLICKEY AND DATA COMPUTATIONAL REFERENCE - BOTH HASHES
-        String publickeyIN = queryToken("2");
-        // form token URL  check if saved token
-        String liveToken = queryToken("1");
-        urlDevicesave = urldevice + publickeyIN + "/" + liveToken;
-        JSONObject deviceList = queryDeviceFull();
-        JSONObject deviceAtt = queryDeviceAttrib();
+        startAddtables();
 
+        // check token and publickey are entered, if not prompt to do so
+        EditText editToken = (EditText)findViewById(R.id.tokenText);
+        String tokentoSave = editToken.getText().toString();
+        SaveUpdateToken(tokentoSave, "1");
+        // form token URL  check if saved token
+        EditText editTokenk = (EditText)findViewById(R.id.publickey);
+        String keytoSave = editTokenk.getText().toString();
+        SaveUpdateToken(keytoSave, "2");
+
+        // if both entered proceed to save device data
+        urlDevicesave = urldevice + keytoSave + "/" + tokentoSave;
+        JSONObject deviceList = queryDeviceFull(keytoSave);
+        JSONObject deviceAtt = queryDeviceAttrib();
         // now  prepare JSON and save to data vault
         prepareDeviceData(deviceList, deviceAtt);
+
+        // heartChain computational reference layer set in app
+        // TO-DO--
+        String comrefIN = "http://healthscience.org/heartchain/da-hc-773355992211";
 
     }
 
@@ -292,6 +322,37 @@ public class DbManagementActivity extends AbstractGBActivity {
         }
 
         return batches;
+    }
+
+    // setup additonal tables
+    private void startAddtables() {
+
+        try (DBHandler dbHandler = GBApplication.acquireDB()) {
+            exportShared();
+            DBHelper helper = new DBHelper(this);
+            // setup sqllite connection manual method ie not DAO
+            SQLiteOpenHelper sqLiteOpenHelper = dbHandler.getHelper();
+            SQLiteDatabase db = sqLiteOpenHelper.getReadableDatabase();
+
+            // need to create a new table
+            db.execSQL("CREATE TABLE IF NOT EXISTS TOKEN(TID INTEGER, hashtoken STRING)");
+
+            try {
+                db.execSQL("INSERT INTO TOKEN(TID, hashtoken) VALUES (1, 'none' )");
+                Toast.makeText(this, "insert first TOKEN", Toast.LENGTH_LONG).show();
+                db.execSQL("INSERT INTO TOKEN(TID, hashtoken) VALUES (2, '0000000' )");
+                Toast.makeText(this, "insert blank publickey", Toast.LENGTH_LONG).show();
+                db.execSQL("INSERT INTO TOKEN(TID, hashtoken) VALUES (3, 'false' )");
+                Toast.makeText(this, "setup tables", Toast.LENGTH_LONG).show();
+                GB.toast(this, "First time table setup", Toast.LENGTH_LONG, GB.INFO);
+
+                } catch (Exception e) {
+                /* no table set it up */
+
+                }
+        } catch (Exception ex) {
+            //GB.toast(this, "error with PRE sync", Toast.LENGTH_LONG, GB.ERROR, ex);
+        }
     }
 
     // prepare data to sync to peer to peer network
@@ -338,19 +399,7 @@ public class DbManagementActivity extends AbstractGBActivity {
                     tableExists = true;
                 } catch (Exception e) {
                     /* no table set it up */
-                    db.execSQL("CREATE TABLE IF NOT EXISTS NETWORK_SYNC_TIMESTAMP(DEVICE_ID INTEGER, SYNCSTAMP INTEGER NOT NULL)");
-                    Toast.makeText(this, "Database Created SYNC", Toast.LENGTH_LONG).show();
 
-                    for (int i = 0; i < deviceList.size(); i++) {
-                        JSONObject listd = (JSONObject) deviceList.get(i);
-                        //String first = (String) deviceList.get(0); getJSONObject
-                        //Toast.makeText(this, "queryDevice element == " + listd, Toast.LENGTH_LONG).show();
-                        String deviceID = listd.getString("_id");
-                        String startSyncDate = "0000000001";
-                        // insert first sync date
-                        db.execSQL("INSERT INTO NETWORK_SYNC_TIMESTAMP(DEVICE_ID, SYNCSTAMP) VALUES ('" + deviceID + "','" + startSyncDate + "')");
-                        Toast.makeText(this, "insert base syncstamp", Toast.LENGTH_LONG).show();
-                    }
 
                 }
                 //String urlsyncdevice = urlsync + publickeyIN + "/" + liveToken + "/F1:D1:D5:6A:32:D6";
@@ -785,6 +834,8 @@ public class DbManagementActivity extends AbstractGBActivity {
                             Toast.makeText(getApplicationContext(), "pass logic", Toast.LENGTH_LONG).show();
                            firstDBButton.setVisibility(View.INVISIBLE);
                            syncDBButton.setVisibility(View.VISIBLE);
+                           // update table set device data saved
+                            SaveUpdateToken("true", "3");
                         }
                     }
                 }, new ErrorListener() {
@@ -811,7 +862,7 @@ public class DbManagementActivity extends AbstractGBActivity {
         }
     }
 
-    private boolean checkSaveToken(String tokenIN, String tidIN){
+    private boolean SaveUpdateToken(String tokenIN, String tidIN){
 
 
         String localtoken = tokenIN.toString();
@@ -842,6 +893,10 @@ public class DbManagementActivity extends AbstractGBActivity {
                         db.execSQL("UPDATE TOKEN SET hashtoken = '" + tokenIN + "' WHERE TID = 2");
                         Toast.makeText(this, "second UPDATED PUBKEY", Toast.LENGTH_SHORT).show();
                     }
+                    else if(tidIN == "3") {
+                        db.execSQL("UPDATE TOKEN SET hashtoken = '" + tokenIN + "' WHERE TID = 3");
+                        Toast.makeText(this, "device data saved to network", Toast.LENGTH_SHORT).show();
+                    }
                 }
             } catch (Exception e) {
                 /* no table set it up */
@@ -855,6 +910,8 @@ public class DbManagementActivity extends AbstractGBActivity {
                     Toast.makeText(this, "insert first TOKEN", Toast.LENGTH_LONG).show();
                     db.execSQL("INSERT INTO TOKEN(TID, hashtoken) VALUES (2, '0000000' )");
                     Toast.makeText(this, "insert blank publickey", Toast.LENGTH_LONG).show();
+                    db.execSQL("INSERT INTO TOKEN(TID, hashtoken) VALUES (3, 'false' )");
+                    Toast.makeText(this, "setup tables", Toast.LENGTH_LONG).show();
                 }
 
             }
@@ -912,7 +969,7 @@ public class DbManagementActivity extends AbstractGBActivity {
             e.printStackTrace();
             //GB.toast(this, "error query token" + e.toString(), Toast.LENGTH_LONG, GB.ERROR, e);
             TextView stv=(TextView)findViewById(R.id.syncDate);
-            stv.setText("insert token" + e.toString());
+            stv.setText("query status: " + e.toString());
             return "none";
         }
 
@@ -985,7 +1042,7 @@ public class DbManagementActivity extends AbstractGBActivity {
         }
     }
 
-    private JSONObject queryDeviceFull() {
+    private JSONObject queryDeviceFull(String PublickeyIN) {
 
         try (DBHandler dbHandler = GBApplication.acquireDB())
         {
@@ -1031,7 +1088,9 @@ public class DbManagementActivity extends AbstractGBActivity {
                 String deviceType = liveDevices.getString(liveDevices.getColumnIndex("TYPE"));
                 String deviceModel = liveDevices.getString(liveDevices.getColumnIndex("MODEL"));
 
-                // dlist.put("_id",deviceId.toString());
+                dlist.put("publickey", PublickeyIN);
+                dlist.put("device_sensor1", "lightLED");
+                dlist.put("device_sensor2", "accelerometer");
                 dlist.put("device_name", devicenName);
                 dlist.put("device_manufacturer", deviceManufacturer);
                 dlist.put("device_mac", deviceMac);

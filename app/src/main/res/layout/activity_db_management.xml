@@ -32,7 +32,7 @@
                 android:layout_width="wrap_content"
                 android:layout_height="wrap_content"
                 android:layout_marginTop="10dp"
-                android:text="HS-Sync" />
+                android:text="Save-Sync data" />
 
             <TextView
                 android:id="@+id/syncText"
@@ -80,7 +80,7 @@
             <EditText
                 android:id="@+id/publickey"
                 android:layout_width="180dp"
-                android:hint="identity"
+                android:hint="publickey"
                 android:inputType="text" />
 
             <Button
