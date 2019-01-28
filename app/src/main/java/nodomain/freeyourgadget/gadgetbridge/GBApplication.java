@@ -43,6 +43,8 @@ import android.support.v4.content.LocalBroadcastManager;
 import android.util.Log;
 import android.util.TypedValue;
 
+import com.crashlytics.android.Crashlytics;
+import io.fabric.sdk.android.Fabric;
 import java.io.File;
 import java.io.IOException;
 import java.util.HashSet;
@@ -144,6 +146,7 @@ public class GBApplication extends Application {
     public void onCreate() {
         app = this;
         super.onCreate();
+        Fabric.with(this, new Crashlytics());
 
         if (lockHandler != null) {
             // guard against multiple invocations (robolectric)

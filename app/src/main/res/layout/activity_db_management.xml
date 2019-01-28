@@ -65,19 +65,6 @@
                 grid:layout_columnWeight="1" />
 
             <EditText
-                android:id="@+id/tokenText"
-                android:layout_width="180dp"
-                android:hint="token"
-                android:inputType="text" />
-
-            <Button
-                android:id="@+id/tokenButton"
-                android:layout_width="wrap_content"
-                android:layout_height="wrap_content"
-                android:layout_marginTop="40dp"
-                android:text="Save token" />
-
-            <EditText
                 android:id="@+id/publickey"
                 android:layout_width="180dp"
                 android:hint="publickey"
@@ -89,6 +76,19 @@
                 android:layout_height="wrap_content"
                 android:layout_marginTop="40dp"
                 android:text="Save key" />
+
+            <EditText
+                android:id="@+id/tokenText"
+                android:layout_width="180dp"
+                android:hint="token"
+                android:inputType="text" />
+
+            <Button
+                android:id="@+id/tokenButton"
+                android:layout_width="wrap_content"
+                android:layout_height="wrap_content"
+                android:layout_marginTop="40dp"
+                android:text="Save token" />
 
             <Button
                 android:id="@+id/exportDBButton"

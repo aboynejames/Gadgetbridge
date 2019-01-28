@@ -13,6 +13,9 @@
         <item android:id="@+id/action_db_management"
             android:title="@string/action_db_management"
             android:icon="@drawable/ic_database_management" />
+        <item android:id="@+id/action_healthspan_management"
+            android:title="healthspan"
+            android:icon="@drawable/ic_healthspan_management" />
         <item android:id="@+id/action_blacklist"
             android:title="@string/title_activity_appblacklist"
             android:icon="@drawable/ic_block_black" />

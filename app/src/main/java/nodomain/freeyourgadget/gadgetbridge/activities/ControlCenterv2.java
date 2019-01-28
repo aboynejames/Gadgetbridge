@@ -248,6 +248,10 @@ public class ControlCenterv2 extends AppCompatActivity
                 Intent dbIntent = new Intent(this, DbManagementActivity.class);
                 startActivity(dbIntent);
                 return true;
+            case R.id.action_healthspan_management:
+                Intent healthspanIntent = new Intent(this, HealthspanAnalysis.class);
+                startActivity(healthspanIntent);
+                return true;
             case R.id.action_blacklist:
                 Intent blIntent = new Intent(this, AppBlacklistActivity.class);
                 startActivity(blIntent);

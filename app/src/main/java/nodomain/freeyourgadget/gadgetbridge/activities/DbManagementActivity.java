@@ -90,12 +90,13 @@ public class DbManagementActivity extends AbstractGBActivity {
 
     private RequestQueue mRequestQueue;
     private StringRequest mStringRequest;
-    private String url = "http://165.227.244.213:8881";//"http://188.166.138.93:8882/";
-    private String urlsave = "http://165.227.244.213:8881/datamsave/";//"http:// 188.166.138.93:8882/datamsave/";
-    private String urldevice = "http://165.227.244.213:8881/devicesave/";
-    private String urlsync = "http://165.227.244.213:8881/sync/";
+    private String url = "http://165.227.244.213:8882";//"http://188.166.138.93:8882/";
+    private String urlsave = "http://165.227.244.213:8882/datamsave/";//"http:// 188.166.138.93:8882/datamsave/";
+    private String urldevice = "http://165.227.244.213:8882/devicesave/";
+    private String urlsync = "http://165.227.244.213:8882/sync/";
     private String urltoken;
     private String urlDevicesave;
+    private String comrefIN = "cnrl-773355992211";
     //private String urlsyncdevice;
     private String editTokenStr;
     // holds sync data for POST call
@@ -235,9 +236,9 @@ public class DbManagementActivity extends AbstractGBActivity {
 
     // check for first time use
     private void startStatus() {
-
+        // has the starting addtional sqlite tables been added?
         String status = queryToken("3");
-        Toast.makeText(getApplicationContext(),"status start: " + status, Toast.LENGTH_LONG).show();
+        // Toast.makeText(getApplicationContext(),"status start: " + status, Toast.LENGTH_LONG).show();
         if(Objects.equals(status, "true")) {
             // display sync button
             firstDBButton = findViewById(R.id.firstDBButton);
@@ -263,8 +264,8 @@ public class DbManagementActivity extends AbstractGBActivity {
             // need to query deviceData saved? If yes only show First Setup button
             syncDBButton = findViewById(R.id.syncDBButton);
             syncDBButton.setVisibility(View.INVISIBLE);
-            // TextView tv = (TextView) findViewById(R.id.firstDBButton);
-            // tv.setText("Please enter token and publickey below then click on FIRST STEP");
+            TextView tv = (TextView) findViewById(R.id.syncDate);
+            tv.setText("Please enter publickey and storage token below then click FIRST SETUP");
             firstDBButton = findViewById(R.id.firstDBButton);
             firstDBButton.setOnClickListener(new View.OnClickListener() {
                 @Override
@@ -285,9 +286,6 @@ public class DbManagementActivity extends AbstractGBActivity {
 
     // first time connection to network
     private void firstSettingsDB() {
-        // setup db tables not standard in GB
-        startAddtables();
-
         // check token and publickey are entered, if not prompt to do so
         EditText editToken = (EditText)findViewById(R.id.tokenText);
         String tokentoSave = editToken.getText().toString();
@@ -303,10 +301,6 @@ public class DbManagementActivity extends AbstractGBActivity {
         JSONObject deviceAtt = queryDeviceAttrib();
         // now  prepare JSON and save to data vault
         prepareDeviceData(deviceList, deviceAtt);
-
-        // heartChain computational reference layer set in app
-        // TO-DO--
-        String comrefIN = "http://healthscience.org/heartchain/da-hc-773355992211";
 
     }
 
@@ -339,12 +333,12 @@ public class DbManagementActivity extends AbstractGBActivity {
 
             try {
                 db.execSQL("INSERT INTO TOKEN(TID, hashtoken) VALUES (1, 'none' )");
-                Toast.makeText(this, "insert first TOKEN", Toast.LENGTH_LONG).show();
+                // Toast.makeText(this, "insert first TOKEN", Toast.LENGTH_LONG).show();
                 db.execSQL("INSERT INTO TOKEN(TID, hashtoken) VALUES (2, '0000000' )");
-                Toast.makeText(this, "insert blank publickey", Toast.LENGTH_LONG).show();
+                // Toast.makeText(this, "insert blank publickey", Toast.LENGTH_LONG).show();
                 db.execSQL("INSERT INTO TOKEN(TID, hashtoken) VALUES (3, 'false' )");
-                Toast.makeText(this, "setup tables", Toast.LENGTH_LONG).show();
-                GB.toast(this, "First time table setup", Toast.LENGTH_LONG, GB.INFO);
+                // Toast.makeText(this, "setup tables", Toast.LENGTH_LONG).show();
+                // GB.toast(this, "First time table setup", Toast.LENGTH_LONG, GB.INFO);
 
                 } catch (Exception e) {
                 /* no table set it up */
@@ -369,7 +363,7 @@ public class DbManagementActivity extends AbstractGBActivity {
 
             // PUBLICKEY AND DATA COMPUTATIONAL REFERENCE - BOTH HASHES
             String publickeyIN = queryToken("2");
-            String comrefIN = "http://healthscience.org/heartchain/da-hc-773355992211";
+            String comref = comrefIN;
 
             // get token from app
             //EditText editToken = (EditText)findViewById(R.id.tokenText);
@@ -380,30 +374,12 @@ public class DbManagementActivity extends AbstractGBActivity {
             String liveToken = queryToken("1");
             if(liveToken != "none") {
                 urltoken = urlsave + publickeyIN + "/" + liveToken;
-                //Toast.makeText(getApplicationContext(),"token URL:" + urltoken, Toast.LENGTH_LONG).show();//di
-                //db.execSQL("INSERT INTO NETWORK_SYNC_TIMESTAMP(DEVICE_ID, SYNCSTAMP) VALUES ('3', 0000000001)");
-                // drop table
-                //db.execSQL("DROP TABLE NETWORK_SYNC_TIMESTAMP");
-                //Toast.makeText(this, "Database Dropped NETWORK_SYNC_TIMESTAMP", Toast.LENGTH_LONG).show();
-
                 // need to check how many devices OR any new devices added?
                 List deviceList = queryDevices();
                 // Toast.makeText(this, "DEVICE LIST" + deviceList.toString(), Toast.LENGTH_LONG).show();
                 // need to create a new table to save sync data to ptop work
                 boolean tableExists = false;
-                /* get cursor on it */
-                try {
-                    Toast.makeText(this, "DEVICE LIST", Toast.LENGTH_LONG).show();
-                    db.query("NETWORK_SYNC_TIMESTAMP", null,
-                            null, null, null, null, null);
-                    tableExists = true;
-                } catch (Exception e) {
-                    /* no table set it up */
 
-
-                }
-                //String urlsyncdevice = urlsync + publickeyIN + "/" + liveToken + "/F1:D1:D5:6A:32:D6";
-                //syncData(urlsyncdevice, "1", "F1:D1:D5:6A:32:D6", publickeyIN, comrefIN);
                 // loop over device list and sync the data
                 for (int i = 0; i < deviceList.size(); i++) {
 
@@ -416,7 +392,7 @@ public class DbManagementActivity extends AbstractGBActivity {
                     String urlsyncdevice = urlsync + publickeyIN + "/" + liveToken + "/" + deviceMac;
 
                     // Make network API call to get last sync date from storage
-                    syncData(urlsyncdevice, deviceID, deviceMac, publickeyIN, comrefIN);
+                    syncData(urlsyncdevice, deviceID, deviceMac, publickeyIN, comref);
                     //volleyGet(urlsyncdevice, publickeyIN, liveToken);
 
                 }
@@ -439,7 +415,7 @@ public class DbManagementActivity extends AbstractGBActivity {
                 new Listener<JSONArray>() {
                     @Override
                     public void onResponse(JSONArray response) {
-                        Toast.makeText(getApplicationContext(),"GET Response : "+ response.toString(), Toast.LENGTH_LONG).show();
+                        // Toast.makeText(getApplicationContext(),"GET Response : "+ response.toString(), Toast.LENGTH_LONG).show();
 
                     }
                 }, new ErrorListener() {
@@ -568,7 +544,6 @@ public class DbManagementActivity extends AbstractGBActivity {
             // setup sqllite connection manual method ie not DAO
             SQLiteOpenHelper sqLiteOpenHelper = dbHandler.getHelper();
             SQLiteDatabase db = sqLiteOpenHelper.getReadableDatabase();
-            // form query
             // form the query for data
             // Define a projection that specifies which columns from the database
             // you will actually use after this query.
@@ -787,29 +762,12 @@ public class DbManagementActivity extends AbstractGBActivity {
 
         String localdata = addtwo.toString();
 
-        //TextView tv=(TextView)findViewById(R.id.syncDate);
-        //tv.setText("start of update SYNSTAMP: " + syncdataIN);
-        //GB.toast(this, "new sync data====" + localdata, Toast.LENGTH_LONG, GB.INFO);
-
         try (DBHandler dbHandler = GBApplication.acquireDB()) {
             exportShared();
             DBHelper helper = new DBHelper(this);
             // setup sqllite connection manual method ie not DAO
             SQLiteOpenHelper sqLiteOpenHelper = dbHandler.getHelper();
             SQLiteDatabase db = sqLiteOpenHelper.getReadableDatabase();
-            // update sqlite SYNC table
-            db.execSQL("INSERT INTO NETWORK_SYNC_TIMESTAMP(DEVICE_ID, SYNCSTAMP) VALUES ( " + dID + ", " + localdata + " )");
-
-
-            //Long lastsyncData4 = Long.valueOf(Integer.parseInt(localdata));
-            //long dateLatestsucess = Long.valueOf(lastsyncData4 * 1000);
-
-            //long msTime = System.currentTimeMillis();
-            //SimpleDateFormat formatter = new SimpleDateFormat("MM'/'dd'/'y hh:mm aa");
-            //String curDateSuccess = formatter.format(dateLatestsucess);
-            //TextView stv=(TextView)findViewById(R.id.syncDate);
-            //stv.setText("New success sync date");
-            //Toast.makeText(getApplicationContext(), "updated SYNC time", Toast.LENGTH_SHORT).show();
 
         } catch (Exception e) {
             e.printStackTrace();
@@ -828,10 +786,10 @@ public class DbManagementActivity extends AbstractGBActivity {
                         Toast.makeText(getApplicationContext(), "String Response : " + response.toString(), Toast.LENGTH_LONG).show();
                         // extract message
                          String messageD =  response.optString("save");
-                        Toast.makeText(getApplicationContext(), "String  : " + messageD, Toast.LENGTH_LONG).show();
+                        // Toast.makeText(getApplicationContext(), "String  : " + messageD, Toast.LENGTH_LONG).show();
                         if(Objects.equals(messageD, "passedD")) {
                             // update buttons
-                            Toast.makeText(getApplicationContext(), "pass logic", Toast.LENGTH_LONG).show();
+                            // Toast.makeText(getApplicationContext(), "pass logic", Toast.LENGTH_LONG).show();
                            firstDBButton.setVisibility(View.INVISIBLE);
                            syncDBButton.setVisibility(View.VISIBLE);
                            // update table set device data saved
@@ -887,15 +845,15 @@ public class DbManagementActivity extends AbstractGBActivity {
                     if(tidIN == "1") {
                         // then update the table with the new token/key
                         db.execSQL("UPDATE TOKEN SET hashtoken = '" + tokenIN + "' WHERE TID = 1");
-                        Toast.makeText(this, "second UPDATED TOKEN", Toast.LENGTH_SHORT).show();
+                        // Toast.makeText(this, "second UPDATED TOKEN", Toast.LENGTH_SHORT).show();
                     }
                     else if(tidIN == "2") {
                         db.execSQL("UPDATE TOKEN SET hashtoken = '" + tokenIN + "' WHERE TID = 2");
-                        Toast.makeText(this, "second UPDATED PUBKEY", Toast.LENGTH_SHORT).show();
+                        // Toast.makeText(this, "second UPDATED PUBKEY", Toast.LENGTH_SHORT).show();
                     }
                     else if(tidIN == "3") {
                         db.execSQL("UPDATE TOKEN SET hashtoken = '" + tokenIN + "' WHERE TID = 3");
-                        Toast.makeText(this, "device data saved to network", Toast.LENGTH_SHORT).show();
+                        // Toast.makeText(this, "device data saved to network", Toast.LENGTH_SHORT).show();
                     }
                 }
             } catch (Exception e) {
@@ -907,11 +865,11 @@ public class DbManagementActivity extends AbstractGBActivity {
                 if(tableExists == true) {
                     // insert first sync date
                     db.execSQL("INSERT INTO TOKEN(TID, hashtoken) VALUES (1, '" + localtoken + "' )");
-                    Toast.makeText(this, "insert first TOKEN", Toast.LENGTH_LONG).show();
+                    // Toast.makeText(this, "insert first TOKEN", Toast.LENGTH_LONG).show();
                     db.execSQL("INSERT INTO TOKEN(TID, hashtoken) VALUES (2, '0000000' )");
-                    Toast.makeText(this, "insert blank publickey", Toast.LENGTH_LONG).show();
+                    // Toast.makeText(this, "insert blank publickey", Toast.LENGTH_LONG).show();
                     db.execSQL("INSERT INTO TOKEN(TID, hashtoken) VALUES (3, 'false' )");
-                    Toast.makeText(this, "setup tables", Toast.LENGTH_LONG).show();
+                    // Toast.makeText(this, "setup tables", Toast.LENGTH_LONG).show();
                 }
 
             }
@@ -968,8 +926,10 @@ public class DbManagementActivity extends AbstractGBActivity {
         } catch (Exception e) {
             e.printStackTrace();
             //GB.toast(this, "error query token" + e.toString(), Toast.LENGTH_LONG, GB.ERROR, e);
-            TextView stv=(TextView)findViewById(R.id.syncDate);
-            stv.setText("query status: " + e.toString());
+            // TextView stv=(TextView)findViewById(R.id.syncDate);
+            // stv.setText("query status: " + e.toString());
+            // no tables to setup additional tables
+            startAddtables();
             return "none";
         }
 
