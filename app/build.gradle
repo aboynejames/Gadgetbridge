@@ -26,16 +26,16 @@ android {
         targetSdkVersion 27
 
         // Note: always bump BOTH versionCode and versionName!
-        versionName "0.31.3"
+        versionName "0.31.3e"
         versionCode 142
         vectorDrawables.useSupportLibrary = true
     }
 
     signingConfigs {
         release {
-            storeFile file("/home/aboynejames/code/android/keystore/hs-keys.jks")
+            storeFile file("/home/aboynejames/keystore/hs-keys2.jks")
             storePassword ""
-            keyAlias "key0"
+            keyAlias "key2"
             keyPassword ""
         }
     }

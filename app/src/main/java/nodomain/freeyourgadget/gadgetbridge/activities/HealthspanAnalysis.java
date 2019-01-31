@@ -15,6 +15,8 @@ import android.support.v4.app.NavUtils;
 import android.util.Log;
 import android.view.MenuItem;
 import android.view.View;
+import android.webkit.WebSettings;
+import android.webkit.WebView;
 import android.widget.Button;
 import android.widget.EditText;
 import android.widget.TextView;
@@ -64,12 +66,30 @@ public class HealthspanAnalysis extends AbstractGBActivity {
     private ImportExportSharedPreferences shared_file = new ImportExportSharedPreferences();
 
 
+    private WebView webContext;
+
     @Override
     protected void onCreate(Bundle savedInstanceState) {
         super.onCreate(savedInstanceState);
         setContentView(R.layout.activity_healthspan);
 
         sharedPrefs = PreferenceManager.getDefaultSharedPreferences(this);
+
+        // webContext = findViewById(R.id.webview);
+        // WebView myWebView;
+        // myWebView = new WebView(webContext);
+        // setContentView(myWebView);
+
+        // myWebView.loadUrl("https://www.example.com");
+
+
+        WebView webView = (WebView) findViewById(R.id.webview);
+
+        WebSettings webSettings = webView.getSettings();
+        webSettings.setJavaScriptEnabled(true);
+
+        String hsURL = "file:///android_asset/index.html";
+        webView.loadUrl(hsURL);
     }
 
 }

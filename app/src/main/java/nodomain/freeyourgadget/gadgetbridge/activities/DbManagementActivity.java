@@ -64,6 +64,7 @@ import java.util.List;
 import java.util.Objects;
 
 import nodomain.freeyourgadget.gadgetbridge.GBApplication;
+import nodomain.freeyourgadget.gadgetbridge.GBException;
 import nodomain.freeyourgadget.gadgetbridge.R;
 import nodomain.freeyourgadget.gadgetbridge.database.DBHandler;
 import nodomain.freeyourgadget.gadgetbridge.database.DBHelper;
@@ -110,9 +111,12 @@ public class DbManagementActivity extends AbstractGBActivity {
     protected void onCreate(Bundle savedInstanceState) {
         super.onCreate(savedInstanceState);
         setContentView(R.layout.activity_db_management);
-
+        sharedPrefs = PreferenceManager.getDefaultSharedPreferences(this);
+        // has the first time setup been run, check mobiledb
         dbPath = (TextView) findViewById(R.id.activity_db_management_path);
         dbPath.setText(getExternalPath());
+
+        startStatus();
 
         exportDBButton = (Button) findViewById(R.id.exportDBButton);
         exportDBButton.setOnClickListener(new View.OnClickListener() {
@@ -128,9 +132,6 @@ public class DbManagementActivity extends AbstractGBActivity {
                 importDB();
             }
         });
-
-        // has the first time setup been run, check mobiledb
-        startStatus();
 
         // save manual input token
         tokenButton = findViewById(R.id.tokenButton);
@@ -181,8 +182,6 @@ public class DbManagementActivity extends AbstractGBActivity {
                 deleteActivityDatabase();
             }
         });
-
-        sharedPrefs = PreferenceManager.getDefaultSharedPreferences(this);
     }
 
     private boolean hasOldActivityDatabase() {
@@ -247,20 +246,18 @@ public class DbManagementActivity extends AbstractGBActivity {
             syncDBButton.setOnClickListener(new View.OnClickListener() {
                 @Override
                 public void onClick(View v) {
-                    // first check there is interenet connection
+                // first check there is interenet connection
                     boolean InternetOn = isNetworkConnected();
                     if(InternetOn == true) {
-
                         syncDB();
                     }
                     else {
-                        Toast.makeText(getApplicationContext(),"NO INTERNET CONNECTION", Toast.LENGTH_LONG).show();
+                    Toast.makeText(getApplicationContext(),"NO INTERNET CONNECTION", Toast.LENGTH_LONG).show();
                     }
                 }
             });
         }
         else {
-
             // need to query deviceData saved? If yes only show First Setup button
             syncDBButton = findViewById(R.id.syncDBButton);
             syncDBButton.setVisibility(View.INVISIBLE);
@@ -270,15 +267,15 @@ public class DbManagementActivity extends AbstractGBActivity {
             firstDBButton.setOnClickListener(new View.OnClickListener() {
                 @Override
                 public void onClick(View v) {
-                    // first check there is interenet connection
-                    boolean InternetOn = isNetworkConnected();
-                    if(InternetOn == true) {
-                        Toast.makeText(getApplicationContext(),"FIRST SETUP CLICKED", Toast.LENGTH_LONG).show();
+                // first check there is interenet connection
+                boolean InternetOn = isNetworkConnected();
+                if(InternetOn == true) {
+                    Toast.makeText(getApplicationContext(),"FIRST SETUP CLICKED", Toast.LENGTH_LONG).show();
                         firstSettingsDB();
-                    }
-                    else {
-                        Toast.makeText(getApplicationContext(),"NO INTERNET CONNECTION", Toast.LENGTH_LONG).show();
-                    }
+                }
+                else {
+                    Toast.makeText(getApplicationContext(),"NO INTERNET CONNECTION", Toast.LENGTH_LONG).show();
+                }
                 }
             });
         }
@@ -294,14 +291,12 @@ public class DbManagementActivity extends AbstractGBActivity {
         EditText editTokenk = (EditText)findViewById(R.id.publickey);
         String keytoSave = editTokenk.getText().toString();
         SaveUpdateToken(keytoSave, "2");
-
         // if both entered proceed to save device data
         urlDevicesave = urldevice + keytoSave + "/" + tokentoSave;
         JSONObject deviceList = queryDeviceFull(keytoSave);
         JSONObject deviceAtt = queryDeviceAttrib();
         // now  prepare JSON and save to data vault
         prepareDeviceData(deviceList, deviceAtt);
-
     }
 
     // batching utility method
@@ -314,7 +309,6 @@ public class DbManagementActivity extends AbstractGBActivity {
             batches.add(batch);
             i = i + nextInc;
         }
-
         return batches;
     }
 
@@ -327,7 +321,6 @@ public class DbManagementActivity extends AbstractGBActivity {
             // setup sqllite connection manual method ie not DAO
             SQLiteOpenHelper sqLiteOpenHelper = dbHandler.getHelper();
             SQLiteDatabase db = sqLiteOpenHelper.getReadableDatabase();
-
             // need to create a new table
             db.execSQL("CREATE TABLE IF NOT EXISTS TOKEN(TID INTEGER, hashtoken STRING)");
 
@@ -339,7 +332,6 @@ public class DbManagementActivity extends AbstractGBActivity {
                 db.execSQL("INSERT INTO TOKEN(TID, hashtoken) VALUES (3, 'false' )");
                 // Toast.makeText(this, "setup tables", Toast.LENGTH_LONG).show();
                 // GB.toast(this, "First time table setup", Toast.LENGTH_LONG, GB.INFO);
-
                 } catch (Exception e) {
                 /* no table set it up */
 
@@ -349,38 +341,43 @@ public class DbManagementActivity extends AbstractGBActivity {
         }
     }
 
+    private void prepareDeviceData ( JSONObject deviceIN, JSONObject deviceAttin) {
+        // form device JSONobject
+        JSONObject merged = new JSONObject();
+        JSONObject[] objs = new JSONObject[] { deviceIN, deviceAttin };
+        for (JSONObject obj : objs) {
+            Iterator it = obj.keys();
+            while (it.hasNext()) {
+                String key = (String)it.next();
+                try {
+                    merged.put(key, obj.get(key));
+                } catch (JSONException e) {
+                    e.printStackTrace();
+                }
+            }
+        }
+        PostDevicedata("device", merged);
+    }
+
     // prepare data to sync to peer to peer network
     private void syncDB() {
-
         try (DBHandler dbHandler = GBApplication.acquireDB()) {
             exportShared();
             DBHelper helper = new DBHelper(this);
             // setup sqllite connection manual method ie not DAO
             SQLiteOpenHelper sqLiteOpenHelper = dbHandler.getHelper();
             SQLiteDatabase db = sqLiteOpenHelper.getReadableDatabase();
-
             GB.toast(this, "getting ready for sync", Toast.LENGTH_LONG, GB.INFO);
-
             // PUBLICKEY AND DATA COMPUTATIONAL REFERENCE - BOTH HASHES
             String publickeyIN = queryToken("2");
             String comref = comrefIN;
-
             // get token from app
-            //EditText editToken = (EditText)findViewById(R.id.tokenText);
-            //String editTokenStr = editToken.getText().toString();
-            //Toast.makeText(getApplicationContext(),"token in :" + editTokenStr, Toast.LENGTH_LONG).show();
-
             // form token URL  check if saved token
             String liveToken = queryToken("1");
             if(liveToken != "none") {
                 urltoken = urlsave + publickeyIN + "/" + liveToken;
                 // need to check how many devices OR any new devices added?
                 List deviceList = queryDevices();
-                // Toast.makeText(this, "DEVICE LIST" + deviceList.toString(), Toast.LENGTH_LONG).show();
-                // need to create a new table to save sync data to ptop work
-                boolean tableExists = false;
-
-                // loop over device list and sync the data
                 for (int i = 0; i < deviceList.size(); i++) {
 
                     JSONObject listd = (JSONObject) deviceList.get(i);
@@ -390,11 +387,9 @@ public class DbManagementActivity extends AbstractGBActivity {
                     String deviceMac = listdM.getString("IDENTIFER");
                     //Toast.makeText(this, "device MAC == " + deviceMac, Toast.LENGTH_LONG).show();
                     String urlsyncdevice = urlsync + publickeyIN + "/" + liveToken + "/" + deviceMac;
-
                     // Make network API call to get last sync date from storage
                     syncData(urlsyncdevice, deviceID, deviceMac, publickeyIN, comref);
                     //volleyGet(urlsyncdevice, publickeyIN, liveToken);
-
                 }
             }
             else {
@@ -403,11 +398,9 @@ public class DbManagementActivity extends AbstractGBActivity {
         } catch (Exception ex) {
             //GB.toast(this, "error with PRE sync", Toast.LENGTH_LONG, GB.ERROR, ex);
         }
-
     }
-
+/*
     private void volleyGet(final String didIN, String publickeyIN, String liveTokenIN) {
-
         //Toast.makeText(getApplicationContext(),"volleyGET:" + didIN, Toast.LENGTH_LONG).show();
         String liveGet = urlsync + publickeyIN + "/" + liveTokenIN + "/E3:30:80:7A:77:B5";//F1:D1:D5:6A:32:D6";
 
@@ -426,22 +419,15 @@ public class DbManagementActivity extends AbstractGBActivity {
                 Log.i(null,"Error :" + error.toString());
             }
         });
-
         VolleySingleton.getInstance(this).addToRequestQueue(jsonObjectRequest);
-
     }
-
-
+*/
     public void syncData(final String urlsyncdevice, final String deviceID, final String deviceMac, final String publickeyIN, final String comrefIN) {
-        //Toast.makeText(getApplicationContext(),"syncData function before callback  : ", Toast.LENGTH_LONG).show();
-        //Toast.makeText(getApplicationContext(),"Sync URL:" + urlsyncdevice, Toast.LENGTH_LONG).show();
-
-        getSyncResponse(new DataCallback() {
+         getSyncResponse(new DataCallback() {
             String lastsyncitem;
             @Override
             public void onSuccess(String result) {
                 lastsyncitem = result;
-                //Toast.makeText(getApplicationContext(),"SYNC last  : "+ lastsyncitem, Toast.LENGTH_LONG).show();
                 // process next batch of syning
                 // form query to get last sync date
                 Date liveDate;
@@ -460,24 +446,15 @@ public class DbManagementActivity extends AbstractGBActivity {
                 long msTime = System.currentTimeMillis();
                 SimpleDateFormat formatter = new SimpleDateFormat("MM'/'dd'/'y hh:mm aa");
                 String curDate = formatter.format(datemillprev);
-                //Toast.makeText(getApplicationContext(),"deviceID" + deviceID, Toast.LENGTH_LONG).show();
-                //Toast.makeText(getApplicationContext(),"last syncDate" + curDate, Toast.LENGTH_LONG).show();
-
-                //Toast.makeText(this, "human date" + curDate, Toast.LENGTH_LONG).show();
                 TextView tv = (TextView) findViewById(R.id.syncText);
                 tv.setText("Last sync date: " + curDate);
                 Toast.makeText(getApplicationContext(),"SYNCING" + deviceID, Toast.LENGTH_LONG).show();
 
-                nowDate = millseconds.toString();//"1529666370";//millseconds.toString();
-
-                //Date resultdate = sdf.parse(nowDate);
+                nowDate = millseconds.toString();
                 TextView ntv = (TextView) findViewById(R.id.nowDate);
                 ntv.setText("NOW date: " + liveDate);
-
                 // make backup on mobile app of sync date
                 syncTimestampDB(newstartQuery, deviceID);
-
-                //Toast.makeText(this, "DEVICE ID? " + deviceID, Toast.LENGTH_LONG).show();
                 queryDeviceData(deviceID, deviceMac, publickeyIN, comrefIN, nowDate, newstartQuery);
             }
         }, urlsyncdevice);
@@ -489,24 +466,17 @@ public class DbManagementActivity extends AbstractGBActivity {
     }
 
     private String getSyncResponse(final DataCallback callback, String urlsyncdevice) {
-
-        //Toast.makeText(getApplicationContext(),"Sync URL:" + urlsyncdevice, Toast.LENGTH_LONG).show();
         JsonArrayRequest jsonObjectRequest = new JsonArrayRequest(Request.Method.GET, urlsyncdevice, null,
                 new Listener<JSONArray>() {
-
                     @Override
                     public void onResponse(JSONArray response) {
-                        //Toast.makeText(getApplicationContext(),"String Response : "+ response.toString(), Toast.LENGTH_LONG).show();
+                        // Toast.makeText(getApplicationContext(),"String Response : "+ response.toString(), Toast.LENGTH_LONG).show();
                         // extract first JSONobject from array
                         JSONObject returnEntry = null;
                         String firstSynctime;
                         try {
                             returnEntry = response.getJSONObject(response.length()-1);
-                            //Toast.makeText(getApplicationContext(),"FIRST : "+ returnEntry.toString(), Toast.LENGTH_LONG).show();
                             firstSynctime = returnEntry.optString("timestamp");
-                            //Toast.makeText(getApplicationContext(),"FIRST : "+ firstSynctime, Toast.LENGTH_LONG).show();
-                            //String lastsyncitem = firstEntry.optString("timestamp");
-                            //Toast.makeText(getApplicationContext(),"SYNC element : "+ lastsyncitem, Toast.LENGTH_LONG).show();
                             // if null, first time use
                             if (firstSynctime.length() == 0) {
                                 firstSynctime = "1";
@@ -531,12 +501,10 @@ public class DbManagementActivity extends AbstractGBActivity {
 
         // Access the RequestQueue through your singleton class.
         VolleySingleton.getInstance(this).addToRequestQueue(jsonObjectRequest);
-
         return null;
     }
 
     private void queryDeviceData(String deviceID, String deviceMac, String publickeyIN, String comrefIN, String nowTimeIN, String syncTimeIn) {
-
         // query for token or ask to input
         try (DBHandler dbHandler = GBApplication.acquireDB()) {
             exportShared();
@@ -556,16 +524,13 @@ public class DbManagementActivity extends AbstractGBActivity {
                     "RAW_KIND",
                     "HEART_RATE"
             };
-
-            //Toast.makeText(getApplicationContext(),"query data sync start time : "+ syncTimeIn, Toast.LENGTH_LONG).show();
-            //Toast.makeText(getApplicationContext(),"query data sync end time : "+ nowTimeIN, Toast.LENGTH_LONG).show();
-            //Toast.makeText(getApplicationContext(),"query for device ID = " + deviceID, Toast.LENGTH_LONG).show();
-            //syncTimeIn = "1535925240";
-            //nowTimeIN = "1536313861";
+            TextView tv = (TextView) findViewById(R.id.syncText);
+            tv.setText("Last CLOUD date: " + syncTimeIn);
+            TextView ntv = (TextView) findViewById(R.id.nowDate);
+            ntv.setText("NOW date: " + nowTimeIN);
             // Filter results
             String selection = "DEVICE_ID" + " = ? AND TIMESTAMP BETWEEN ? AND ?";
             String[] selectionArgs = {deviceID, syncTimeIn, nowTimeIN};
-
             // How you want the results sorted in the resulting Cursor
             String sortOrderd =
                     "TIMESTAMP" + " ASC";
@@ -579,17 +544,14 @@ public class DbManagementActivity extends AbstractGBActivity {
                     null,                   // don't filter by row groups
                     sortOrderd               // The sort order
             );
-
             String message = null;
             // iterate of data in cursor form/ pass data on to volley
             // find size of data
             Integer syncLength = cursor.getCount();
             //Toast.makeText(getApplicationContext(),"cursor length" + syncLength, Toast.LENGTH_LONG).show();
-
             // first prepare normal list array from Cursor to allow sublit operation to batch
             List all = new ArrayList<>();
             while (cursor.moveToNext()) {
-
                 JSONObject item = new JSONObject();
 
                 long timeId = cursor.getLong(
@@ -624,45 +586,30 @@ public class DbManagementActivity extends AbstractGBActivity {
             cursor.close();
             // find size of new LIST
             Integer allLength = all.size();
-            //Toast.makeText(getApplicationContext(), "New LIST length" + allLength, Toast.LENGTH_LONG).show();
-
-            //prepare batches
+            // prepare batches
             List batched = getBatches(all, 100);
             Integer batchLength = batched.size();
             Toast.makeText(getApplicationContext(), "Batched length" + batchLength, Toast.LENGTH_LONG).show();
-
-            if (syncLength <= 100 && syncLength != 0) {
+            if (batchLength <= 1 && syncLength != 0) {
+                // Toast.makeText(getApplicationContext(), "less than 1 - go ahead sync", Toast.LENGTH_LONG).show();
                 // make a put ie save to HS network
-                //TextView btv=(TextView)findViewById(R.id.syncText);
-                //btv.setText("RAW Batched chunk: " + batched.get(0).toString());
-                //Toast.makeText(getApplicationContext(),"Length under 1000", Toast.LENGTH_LONG).show();
                 prepareSyncJSON((List) batched.get(0), deviceID);
 
             } else {
-                // save every
-                //Toast.makeText(getApplicationContext(),"Length OVER 1000 or Zero", Toast.LENGTH_LONG).show();
-                //if zero nothing to update
-                //else batch and sync
                 if (syncLength == 0) {
                     Toast.makeText(getApplicationContext(), "Nothing to Sync", Toast.LENGTH_LONG).show();
 
                 } else {
-                    //Toast.makeText(getApplicationContext(), "Preparing Batches for Sync", Toast.LENGTH_LONG).show();
+                    // Toast.makeText(getApplicationContext(), "Preparing Batches Sync", Toast.LENGTH_LONG).show();
                     // itterate batch listed
-                    int j = 0;
-                    while (batched.size() > j) {
-                        j++;
-                        if (batchLength == j) {
-
-                            //Toast.makeText(getApplicationContext(), "Batching & SYNCING COMPLETE", Toast.LENGTH_SHORT).show();
-                            //TextView tvcomplete = (TextView) findViewById(R.id.syncText);
-                            //tvcomplete.setText("Batched COMPLETED");
-                        }
-                        // batch limit reached - form JSON and send
-                        //Toast.makeText(getApplicationContext(), "Batch" + j, Toast.LENGTH_SHORT).show();
-                        // extract/pass on data to
-                        prepareSyncJSON((List) batched.get(j), deviceID);
-
+                    int j = 1;
+                    int sizeB = batched.size();
+                    // Toast.makeText(getApplicationContext(), "Batch size " + sizeB, Toast.LENGTH_SHORT).show();
+                    for (int i = 0; i < sizeB; i++) {
+                        // Toast.makeText(getApplicationContext(), "loop-- " + i, Toast.LENGTH_SHORT).show();
+                        Object singleB = batched.get(i);
+                        // Toast.makeText(getApplicationContext(), "json " + singleB.toString(), Toast.LENGTH_SHORT).show();
+                        prepareSyncJSON((List) batched.get(i), deviceID);
                     }
                 }
             }
@@ -673,7 +620,6 @@ public class DbManagementActivity extends AbstractGBActivity {
 
     private void prepareSyncJSON (Object batchIN, String didIN) {
         // form JSONarray
-        //Toast.makeText(getApplicationContext(),"prepare ID:" + didIN, Toast.LENGTH_LONG).show();
         Object json = null;
         JSONArray jsonArray = null;
         try {
@@ -684,47 +630,16 @@ public class DbManagementActivity extends AbstractGBActivity {
         if (json instanceof JSONArray) {
             jsonArray = (JSONArray) json;
         }
-
-        //arraysync = jsonArray;
         PostandRequestResponse(didIN, jsonArray);
-
-    }
-
-    private void prepareDeviceData ( JSONObject deviceIN, JSONObject deviceAttin) {
-        // form device JSONobject
-        // Toast.makeText(getApplicationContext(),"prepare ID:", Toast.LENGTH_LONG).show();
-        // forst merge/ add together
-        JSONObject merged = new JSONObject();
-        JSONObject[] objs = new JSONObject[] { deviceIN, deviceAttin };
-        for (JSONObject obj : objs) {
-            Iterator it = obj.keys();
-            while (it.hasNext()) {
-                String key = (String)it.next();
-                try {
-                    merged.put(key, obj.get(key));
-                } catch (JSONException e) {
-                    e.printStackTrace();
-                }
-            }
-        }
-        // Toast.makeText(getApplicationContext(),"prepare ID:" + merged.toString(), Toast.LENGTH_LONG).show();
-
-        PostDevicedata("device", merged);
     }
 
     private void PostandRequestResponse(final String didIN, final JSONArray syncDataIn) {
-
-        //Toast.makeText(getApplicationContext(),"token URL:" + urltoken, Toast.LENGTH_LONG).show();
-        TextView stv=(TextView)findViewById(R.id.syncDate);
-        //stv.setText("Godo JSON: " + arraysync.toString());
-        //stv.setText("Godo JSON: " + urltoken.toString());
-
         JsonArrayRequest jsonObjectRequest = new JsonArrayRequest(Request.Method.POST, urltoken, syncDataIn,
         new Listener<JSONArray>() {
             @Override
             public void onResponse(JSONArray response) {
                 //.setText("String Response : "+ response.toString());
-                //Toast.makeText(getApplicationContext(),"String Response : "+ response.toString(), Toast.LENGTH_LONG).show();
+                // Toast.makeText(getApplicationContext(),"String Response : "+ response.toString(), Toast.LENGTH_LONG).show();
                 JSONObject respPost = null;
                 try {
                     respPost = response.getJSONObject(response.length()-1);
@@ -747,21 +662,14 @@ public class DbManagementActivity extends AbstractGBActivity {
                 Log.i(null,"Error :" + error.toString());
             }
         });
-
         VolleySingleton.getInstance(this).addToRequestQueue(jsonObjectRequest);
-
     }
 
     // save last sync timestamp to sqlite as a backup, Primary Chick is to network
     private void syncTimestampDB(String syncdataIN, String dID) {
-
-        //Toast.makeText(getApplicationContext(), "device ID entereing sync insert" + dID, Toast.LENGTH_LONG).show();
         Integer addone =  Integer.parseInt(syncdataIN);
         Integer addtwo = addone + 2;
-        //Toast.makeText(getApplicationContext(), "after one add", Toast.LENGTH_LONG).show();
-
         String localdata = addtwo.toString();
-
         try (DBHandler dbHandler = GBApplication.acquireDB()) {
             exportShared();
             DBHelper helper = new DBHelper(this);
@@ -777,13 +685,12 @@ public class DbManagementActivity extends AbstractGBActivity {
     }
 
     private void PostDevicedata(final String didIN, final JSONObject deviceDataIn) {
-
         JsonObjectRequest jsonObjectRequest = new JsonObjectRequest(Request.Method.POST, urlDevicesave, deviceDataIn,
                 new Listener<JSONObject>() {
                     @Override
                     public void onResponse(JSONObject response) {
                         //.setText("String Response : "+ response.toString());
-                        Toast.makeText(getApplicationContext(), "String Response : " + response.toString(), Toast.LENGTH_LONG).show();
+                        // Toast.makeText(getApplicationContext(), "String Response : " + response.toString(), Toast.LENGTH_LONG).show();
                         // extract message
                          String messageD =  response.optString("save");
                         // Toast.makeText(getApplicationContext(), "String  : " + messageD, Toast.LENGTH_LONG).show();
@@ -804,9 +711,7 @@ public class DbManagementActivity extends AbstractGBActivity {
                 Log.i(null,"Error :" + error.toString());
             }
         });
-
         VolleySingleton.getInstance(this).addToRequestQueue(jsonObjectRequest);
-
     }
 
 
@@ -821,11 +726,8 @@ public class DbManagementActivity extends AbstractGBActivity {
     }
 
     private boolean SaveUpdateToken(String tokenIN, String tidIN){
-
-
         String localtoken = tokenIN.toString();
         boolean tableExists = false;
-
         try (DBHandler dbHandler = GBApplication.acquireDB())
         {
             exportShared();
@@ -871,11 +773,10 @@ public class DbManagementActivity extends AbstractGBActivity {
                     db.execSQL("INSERT INTO TOKEN(TID, hashtoken) VALUES (3, 'false' )");
                     // Toast.makeText(this, "setup tables", Toast.LENGTH_LONG).show();
                 }
-
             }
         } catch (Exception e) {
             e.printStackTrace();
-            GB.toast(this, "error syncstamp" + e.toString(), Toast.LENGTH_LONG, GB.ERROR, e);
+            GB.toast(this, "setup" + e.toString(), Toast.LENGTH_LONG, GB.ERROR, e);
             //TextView stv=(TextView)findViewById(R.id.syncDate);
             //stv.setText("insert token" + e.toString());
             return false;
@@ -885,26 +786,26 @@ public class DbManagementActivity extends AbstractGBActivity {
     }
 
     private String queryToken(String typeid) {
-
-        String tokenString;
+        String tStatus;
         // query for token or ask to input
         try (DBHandler dbHandler = GBApplication.acquireDB())
         {
+            // Toast.makeText(getApplicationContext(),"start token query ", Toast.LENGTH_SHORT).show();
             exportShared();
             DBHelper helper = new DBHelper(this);
             // setup sqllite connection manual method ie not DAO
             SQLiteOpenHelper sqLiteOpenHelper = dbHandler.getHelper();
             SQLiteDatabase db = sqLiteOpenHelper.getReadableDatabase();
+
+            String tokenString;
             // form query
-// query last sync table to get last sync date
+            // query last sync table to get last sync date
             String[] projectiond = {
                     "hashtoken"
             };
-
             // Filter results
             String selectiond = "TID = ?";
             String[] selectionArgsd = {typeid};
-
             // How you want the results sorted in the resulting Cursor
             String sortOrder = "";
 
@@ -917,26 +818,24 @@ public class DbManagementActivity extends AbstractGBActivity {
                     null,                   // don't filter by row groups
                     sortOrder               // The sort order
             );
-
             liveToken.moveToFirst();
             tokenString = liveToken.getString(liveToken.getColumnIndex("hashtoken"));
-
-            return tokenString;
+            tStatus = tokenString;
+            // return tokenString;
 
         } catch (Exception e) {
             e.printStackTrace();
-            //GB.toast(this, "error query token" + e.toString(), Toast.LENGTH_LONG, GB.ERROR, e);
-            // TextView stv=(TextView)findViewById(R.id.syncDate);
-            // stv.setText("query status: " + e.toString());
-            // no tables to setup additional tables
+            Toast.makeText(getApplicationContext(),"ERROR token query ", Toast.LENGTH_SHORT).show();
+             // no tables to setup additional tables
             startAddtables();
-            return "none";
+            tStatus = "none";
+            // return "none";
         }
-
+        // Toast.makeText(getApplicationContext(),"RETURN token query-- " + tStatus, Toast.LENGTH_SHORT).show();
+        return tStatus;
     }
 
     private List queryDevices() {
-
         try (DBHandler dbHandler = GBApplication.acquireDB())
         {
             exportShared();
@@ -948,14 +847,11 @@ public class DbManagementActivity extends AbstractGBActivity {
             String[] projectiond = {
                     "_id","IDENTIFIER"
             };
-
             // Filter results
             String selectiond = "";
             String[] selectionArgsd = {};
-
             // How you want the results sorted in the resulting Cursor
             String sortOrder = "";
-
             Cursor liveDevices = db.query(
                     "DEVICE",   // The table to query
                     projectiond,             // The array of columns to return (pass null to get all)
@@ -965,32 +861,19 @@ public class DbManagementActivity extends AbstractGBActivity {
                     null,             // don't filter by row groups
                     sortOrder               // The sort order
             );
-
-
             List deviceArray = new ArrayList<>();
             while (liveDevices.moveToNext()) {
-
                 //ArrayList<String> dlist = new ArrayList<String>();
                 JSONObject dlist = new JSONObject();
-
                 Integer deviceId = liveDevices.getInt(liveDevices.getColumnIndexOrThrow("_id"));
                 String deviceMac = liveDevices.getString(liveDevices.getColumnIndex("IDENTIFIER"));
-
                 dlist.put("_id",deviceId.toString());
                 dlist.put("IDENTIFER", deviceMac);
-
-                //String listda = dlist.toString();
-                //Toast.makeText(this, "queryDevice sub array 1== " + deviceId.toString(), Toast.LENGTH_LONG).show();
-                //Toast.makeText(this, "queryDevice sub array 2== " + listda, Toast.LENGTH_LONG).show();
                 deviceArray.add(dlist);
-
             }
-
             String listdb = deviceArray.toString();
-            //Toast.makeText(this, "queryDevice query LIST == " + listdb, Toast.LENGTH_LONG).show();
             liveDevices.close();
             return deviceArray;
-
         } catch (Exception e) {
             e.printStackTrace();
             //GB.toast(this, "error query token" + e.toString(), Toast.LENGTH_LONG, GB.ERROR, e);
@@ -1003,7 +886,6 @@ public class DbManagementActivity extends AbstractGBActivity {
     }
 
     private JSONObject queryDeviceFull(String PublickeyIN) {
-
         try (DBHandler dbHandler = GBApplication.acquireDB())
         {
             exportShared();
@@ -1019,10 +901,8 @@ public class DbManagementActivity extends AbstractGBActivity {
             // Filter results
             String selectiond = "";
             String[] selectionArgsd = {};
-
             // How you want the results sorted in the resulting Cursor
             String sortOrder = "";
-
             Cursor liveDevices = db.query(
                     "DEVICE",   // The table to query
                     projectiond,             // The array of columns to return (pass null to get all)
@@ -1032,15 +912,10 @@ public class DbManagementActivity extends AbstractGBActivity {
                     null,             // don't filter by row groups
                     sortOrder               // The sort order
             );
-
-
             List deviceArray = new ArrayList<>();
             JSONObject dlist = new JSONObject();
             while (liveDevices.moveToNext()) {
-
-                //ArrayList<String> dlist = new ArrayList<String>();
                 // JSONObject dlist = new JSONObject();
-
                 // Integer deviceId = liveDevices.getInt(liveDevices.getColumnIndexOrThrow("_id"));
                 String devicenName = liveDevices.getString(liveDevices.getColumnIndex("NAME"));
                 String deviceManufacturer = liveDevices.getString(liveDevices.getColumnIndex("MANUFACTURER"));
@@ -1057,14 +932,9 @@ public class DbManagementActivity extends AbstractGBActivity {
                 dlist.put("device_type", deviceType);
                 dlist.put("device_model", deviceModel);
 
-                //String listda = dlist.toString();
-                //Toast.makeText(this, "queryDevice sub array 1== " + deviceId.toString(), Toast.LENGTH_LONG).show();
-                //Toast.makeText(this, "queryDevice sub array 2== " + listda, Toast.LENGTH_LONG).show();
                 deviceArray.add(dlist);
             }
-
             // String listdb = deviceArray.toString();
-            //Toast.makeText(this, "queryDevice query LIST == " + listdb, Toast.LENGTH_LONG).show();
             liveDevices.close();
             // return deviceArray;
             return dlist;
@@ -1082,7 +952,6 @@ public class DbManagementActivity extends AbstractGBActivity {
     }
 
     private JSONObject queryDeviceAttrib() {
-
         try (DBHandler dbHandler = GBApplication.acquireDB())
         {
             exportShared();
@@ -1094,14 +963,11 @@ public class DbManagementActivity extends AbstractGBActivity {
             String[] projectiond = {
                     "_id","FIRMWARE_VERSION1","FIRMWARE_VERSION2","VALID_FROM_UTC","VALID_TO_UTC","DEVICE_ID","VOLATILE_IDENTIFIER"
             };
-
             // Filter results
             String selectiond = "";
             String[] selectionArgsd = {};
-
             // How you want the results sorted in the resulting Cursor
             String sortOrder = "";
-
             Cursor liveDAtt = db.query(
                     "DEVICE_ATTRIBUTES",   // The table to query
                     projectiond,             // The array of columns to return (pass null to get all)
@@ -1111,16 +977,10 @@ public class DbManagementActivity extends AbstractGBActivity {
                     null,             // don't filter by row groups
                     sortOrder               // The sort order
             );
-
-
             List deviceAttArray = new ArrayList<>();
             JSONObject dlist = new JSONObject();
             while (liveDAtt.moveToNext()) {
 
-                //ArrayList<String> dlist = new ArrayList<String>();
-                // JSONObject dlist = new JSONObject();
-
-                // Integer deviceId = liveDAtt.getInt(liveDAtt.getColumnIndexOrThrow("_id"));
                 String deviceFirmware = liveDAtt.getString(liveDAtt.getColumnIndex("FIRMWARE_VERSION1"));
                 String deviceFirmware2 = liveDAtt.getString(liveDAtt.getColumnIndex("FIRMWARE_VERSION2"));
                 String deviceValidF = liveDAtt.getString(liveDAtt.getColumnIndex("VALID_FROM_UTC"));
@@ -1139,11 +999,8 @@ public class DbManagementActivity extends AbstractGBActivity {
                 dlist.put("active", true);
 
                 deviceAttArray.add(dlist);
-
             }
 
-            // String listdb = deviceAttArray.toString();
-            // Toast.makeText(this, "queryDevice query LIST == " + deviceAttArray.toString(), Toast.LENGTH_LONG).show();
             liveDAtt.close();
             // return deviceAttArray;
             return dlist;
