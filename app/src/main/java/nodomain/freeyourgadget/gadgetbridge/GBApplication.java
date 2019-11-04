@@ -42,9 +42,6 @@ import android.provider.ContactsContract.PhoneLookup;
 import android.util.Log;
 import android.util.TypedValue;
 
-
-import com.crashlytics.android.Crashlytics;
-import io.fabric.sdk.android.Fabric;
 import androidx.localbroadcastmanager.content.LocalBroadcastManager;
 import java.io.File;
 import java.io.IOException;
@@ -162,7 +159,6 @@ public class GBApplication extends Application {
     public void onCreate() {
         app = this;
         super.onCreate();
-        Fabric.with(this, new Crashlytics());
 
         if (lockHandler != null) {
             // guard against multiple invocations (robolectric)

@@ -6,8 +6,6 @@
         Comment in for testing Pebble Emulator
         <uses-permission android:name="android.permission.INTERNET" />
     -->
-    <uses-permission android:name="android.permission.INTERNET" />
-    <uses-permission android:name="android.permission.ACCESS_NETWORK_STATE"/>
     <uses-permission android:name="android.permission.BLUETOOTH" />
     <uses-permission android:name="android.permission.BLUETOOTH_ADMIN" />
     <uses-permission android:name="android.permission.READ_CALL_LOG" />
@@ -390,12 +388,6 @@
             android:screenOrientation="portrait"
             android:windowSoftInputMode="stateHidden" />
         <activity
-            android:name=".activities.HealthspanAnalysis"
-            android:label="Healthspan"
-            android:parentActivityName=".activities.ControlCenterv2"
-            android:screenOrientation="portrait"
-            android:windowSoftInputMode="stateHidden" />
-        <activity
             android:name=".activities.DiscoveryActivity"
             android:label="@string/title_activity_discovery"
             android:parentActivityName=".activities.ControlCenterv2" />
@@ -476,7 +468,7 @@
             <intent-filter>
                 <action android:name="android.appwidget.action.APPWIDGET_UPDATE" />
                 <action android:name="nodomain.freeyourgadget.gadgetbridge.WidgetClick" />
-         </intent-filter>
+            </intent-filter>
 
             <meta-data
                 android:name="android.appwidget.provider"
@@ -508,9 +500,6 @@
             </intent-filter>
         </activity>
 
-        <meta-data
-            android:name="io.fabric.ApiKey"
-            android:value="27841e5274db6e16156d050d7c2b6d595b5f161f" />
     </application>
 
 </manifest>
