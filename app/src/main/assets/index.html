@@ -1,19 +1,37 @@
 <html>
-<head></head>
+<head>
+    <script src="moment.min.js"></script>
+    <script src="chart.js"></script>
+    <script src="axios.js"></script>
+    <style>
+    canvas {
+        height: 400px;
+        -moz-user-select: none;
+        -webkit-user-select: none;
+        -ms-user-select: none;
+    }
+	</style>
+</head>
 <body>
 </body>
 <div>
-    <header>Health Span Analsys</header>
-    <div>
-        <a href="#" id="chart" >Chart</a>
-        <a href="#" id="table" >Table</a>
-        <a href="#" id="simulation" >Simulation</a>
-    </div>
+    <header>HealthSpan Analysis</header>
+    <div id="settings-test">s</div>
+    <div id="token-test">t</div>
     <section id="chart-view">
-        Average Heart Rate Chart
+        <div style="width:75%;">
+            <canvas id="canvas"></canvas>
+        </div>
+        <br>
+        <br>
+        <button id="dailyData">Daily</button>
+        <button id="weeklyData">Weekly</button>
+        <button id="monthlyData">Monthly</button>
+        <button id="yearData">Yearly</button>
+        <button id="removeData">Remove Data</button>
     </section>
     <section id="table-view">
-        Average Heart Rate Tale
+        Average Heart Rate Table
     </section>
     <section id="simulation-view">
         Average Heart Rate Simulation
@@ -21,6 +39,188 @@
     <section id="future-view">
         Future
     </section>
+    <script>
+    var tokenIN = window.wvt.setAPItoken()
+    // document.getElementById("settings-test").innerHTML= tokenIN;
+    var settings = JSON.parse(tokenIN)
+    // document.getElementById("token-test").innerHTML= JSON.stringify(settings.publickey);
+    // settings.publickey = '22FQ8dJEApww33p31935';
+    var config = {}
+    var dataTime = [1]
+    var dataSets = [22]
+    // queryTime + '/' + deviceID + '/' + compType + '/' + datatype + '/' + timeseg
+    async function getData () {
+      var dataIN = axios.get('http://165.227.244.213:8882/average/' + settings.publickey + '/' + settings.token + '/22/' + settings.deviceL + '/cnrl-2356388732' + '/cnrl-8856388724' + '/day/').then(function (response) {
+        console.log('axios return')
+        console.log(response)
+        // form appropriate data structures for charting
+        buildNewChart(response.data)
+      })
+      .catch(function (error) {
+      console.log('axios error')
+      console.log(error)
+      });
+    }
+
+    function buildNewChart (dataI) {
+
+      function chartLabelsStructure (dataIN) {
+        let time = []
+        for(let item of dataIN) {
+          // console.log(item)
+          // convert to moment time timeFormat
+          let timeFormat = 'MM/DD/YYYY HH:mm'
+          let millsTime = item.timestamp * 1000
+          let timeChartF = moment(millsTime).toDate()
+          time.push(timeChartF)
+        }
+        // console.log(time)
+        return time
+      }
+
+      function chartDataSetStructure (dataIN) {
+        let data = []
+        for(let item of dataIN) {
+          data.push(item.value)
+        }
+        // console.log(data)
+        return data
+      }
+
+      dataTime = chartLabelsStructure(dataI)
+      console.log(dataTime)
+      dataSets = chartDataSetStructure(dataI)
+      console.log(dataSets)
+      config = {
+        type: 'line',
+        data: {
+          labels: dataTime,
+          datasets: [{
+            label: "Average Heart Rate per Day",
+            backgroundColor: '#008000',
+            borderColor: 'green',
+            fill: false,
+            data: dataSets,
+          }]
+        },
+        options: {
+          responsive: false,
+          tooltips: {
+            mode: 'index',
+            intersect: true
+          },
+          stacked: false,
+          title: {
+            display: true,
+            text: 'Device Data Charting'
+          },
+          scales: {
+            xAxes: [{
+              display: true,
+              type: 'time',
+              time: {
+                format: 'YYYY-MM-DD hh:mm',
+                // round: 'day'
+                tooltipFormat: 'll HH:mm'
+              },
+              position: 'bottom',
+              ticks: {
+                maxRotation: 75,
+                reverse: true
+              }
+            }],
+            yAxes: [{
+              type: 'linear', // only linear but allow scale type registration. This allows extensions to exist solely for log scale for instance
+              display: true,
+              position: 'left',
+              id: 'bpm',
+              ticks: {
+                beginAtZero: true,
+                steps: 10,
+                stepValue: 5,
+                max: 110
+              },
+              scaleLabel: {
+                display: true,
+                labelString: 'Beats Per Minute Heart Rate'
+              }
+            },
+            {
+              type: 'linear', // only linear but allow scale type registration. This allows extensions to exist solely for log scale for instance
+              display: true,
+              position: 'right',
+              id: 'steps',
+              // grid line settings
+              gridLines: {
+                drawOnChartArea: false // only want the grid lines for one axis to show up
+              },
+              ticks: {
+                beginAtZero: true
+              },
+              scaleLabel: {
+                display: true,
+                labelString: 'Number of Steps'
+              }
+            }]
+          }
+        }
+      };
+      var ctx = document.getElementById("canvas").getContext("2d");
+      window.myLine = new Chart(ctx, config);
+      // window.myLine.update();
+
+}
+		var timeFormat = 'MM/DD/YYYY HH:mm';
+
+    config = {
+      type: 'line',
+      data: {
+        labels: dataTime,
+        datasets: [{
+          label: "Average Heart Rate- holder",
+          backgroundColor: '#008000',
+          borderColor: 'green',
+          fill: false,
+          data: dataSets,
+        }]
+      },
+      options: {
+        title:{
+          text: "Base chart"
+        },
+        scales: {
+          xAxes: [{
+            // type: "time",
+            time: {
+              format: timeFormat,
+              // round: 'day'
+              tooltipFormat: 'll HH:mm'
+            },
+            scaleLabel: {
+              display: true,
+              labelString: 'Date'
+            }
+          }, ],
+          yAxes: [{
+            scaleLabel: {
+              display: true,
+              labelString: 'value'
+            }
+          }]
+        }
+      }
+    };
+
+    var color = 'red';
+    window.onload = function() {
+    // console.log(config)
+      var ctx = document.getElementById("canvas").getContext("2d");
+      window.myLine = new Chart(ctx, config);
+      getData()
+    };
+
+	</script>
+
 </div>
 </body>
 </html>

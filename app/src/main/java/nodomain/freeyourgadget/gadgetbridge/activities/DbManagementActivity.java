@@ -97,7 +97,7 @@ public class DbManagementActivity extends AbstractGBActivity {
     private String urlsync = "http://165.227.244.213:8882/sync/";
     private String urltoken;
     private String urlDevicesave;
-    private String comrefIN = "cnrl-773355992211";
+    private String comrefIN = "cnrl-2356388731";
     //private String urlsyncdevice;
     private String editTokenStr;
     // holds sync data for POST call
@@ -143,7 +143,6 @@ public class DbManagementActivity extends AbstractGBActivity {
                 String tokentoSave = editToken.getText().toString();
                 // save to sqlite
                 SaveUpdateToken(tokentoSave, "1");
-
             }
         });
 
@@ -152,12 +151,10 @@ public class DbManagementActivity extends AbstractGBActivity {
         pubkeyButton.setOnClickListener(new View.OnClickListener() {
             @Override
             public void onClick(View v) {
-
                 EditText editToken = (EditText)findViewById(R.id.publickey);
                 String keytoSave = editToken.getText().toString();
                 // save to sqlite
                 SaveUpdateToken(keytoSave, "2");
-
             }
         });
 
@@ -931,6 +928,7 @@ public class DbManagementActivity extends AbstractGBActivity {
                 dlist.put("device_mac", deviceMac);
                 dlist.put("device_type", deviceType);
                 dlist.put("device_model", deviceModel);
+                dlist.put("cnrl", "cnrl-33221101");
 
                 deviceArray.add(dlist);
             }
