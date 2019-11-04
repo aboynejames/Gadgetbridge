@@ -1,4 +1,4 @@
-/*  Copyright (C) 2015-2018 Andreas Shimokawa, Carsten Pfeiffer, Daniele
+/*  Copyright (C) 2015-2019 Andreas Shimokawa, Carsten Pfeiffer, Daniele
     Gobbetti, Vebryn
 
     This file is part of Gadgetbridge.
@@ -23,12 +23,6 @@ import android.content.Context;
 import android.content.Intent;
 import android.content.IntentFilter;
 import android.os.Bundle;
-import android.support.v4.app.Fragment;
-import android.support.v4.app.FragmentManager;
-import android.support.v4.app.FragmentStatePagerAdapter;
-import android.support.v4.content.LocalBroadcastManager;
-import android.support.v4.view.ViewPager;
-import android.support.v4.widget.SwipeRefreshLayout;
 import android.util.AttributeSet;
 import android.view.Menu;
 import android.view.MenuItem;
@@ -43,6 +37,12 @@ import java.text.SimpleDateFormat;
 import java.util.Date;
 import java.util.Objects;
 
+import androidx.fragment.app.Fragment;
+import androidx.fragment.app.FragmentManager;
+import androidx.fragment.app.FragmentStatePagerAdapter;
+import androidx.localbroadcastmanager.content.LocalBroadcastManager;
+import androidx.swiperefreshlayout.widget.SwipeRefreshLayout;
+import androidx.viewpager.widget.ViewPager;
 import nodomain.freeyourgadget.gadgetbridge.GBApplication;
 import nodomain.freeyourgadget.gadgetbridge.R;
 import nodomain.freeyourgadget.gadgetbridge.activities.AbstractFragmentPagerAdapter;
@@ -256,10 +256,22 @@ public class ChartsActivity extends AbstractGBFragmentActivity implements Charts
     }
 
     @Override
+    protected void onActivityResult(int requestCode, int resultCode, Intent data) {
+        super.onActivityResult(requestCode, resultCode, data);
+        if (requestCode == 1) {
+            this.recreate();
+        }
+    }
+
+    @Override
     public boolean onOptionsItemSelected(MenuItem item) {
         switch (item.getItemId()) {
             case R.id.charts_fetch_activity_data:
                 fetchActivityData();
+                return true;
+            case R.id.prefs_charts_menu:
+                Intent settingsIntent = new Intent(this, ChartsPreferencesActivity.class);
+                startActivityForResult(settingsIntent,1);
                 return true;
             default:
                 break;
@@ -338,6 +350,24 @@ public class ChartsActivity extends AbstractGBFragmentActivity implements Charts
             return 5;
         }
 
+        private String getSleepTitle() {
+            if (GBApplication.getPrefs().getBoolean("charts_range", true)) {
+                return getString(R.string.weeksleepchart_sleep_a_month);
+            }
+            else{
+                return getString(R.string.weeksleepchart_sleep_a_week);
+            }
+        }
+
+        public String getStepsTitle() {
+            if (GBApplication.getPrefs().getBoolean("charts_range", true)) {
+                return getString(R.string.weekstepschart_steps_a_month);
+            }
+            else{
+                return getString(R.string.weekstepschart_steps_a_week);
+            }
+        }
+
         @Override
         public CharSequence getPageTitle(int position) {
             switch (position) {
@@ -346,9 +376,9 @@ public class ChartsActivity extends AbstractGBFragmentActivity implements Charts
                 case 1:
                     return getString(R.string.sleepchart_your_sleep);
                 case 2:
-                    return getString(R.string.weeksleepchart_sleep_a_week);
+                    return getSleepTitle();
                 case 3:
-                    return getString(R.string.weekstepschart_steps_a_week);
+                    return getStepsTitle();
                 case 4:
                     return getString(R.string.stats_title);
                 case 5:

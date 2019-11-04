@@ -1,6 +1,6 @@
-/*  Copyright (C) 2015-2018 Andreas Shimokawa, Carsten Pfeiffer, Daniele
-    Gobbetti, Frank Slezak, Julien Pivotto, Kevin Richter, Sergio Lopez, Steffen
-    Liebergeld, Uwe Hermann
+/*  Copyright (C) 2015-2019 Andreas Shimokawa, Carsten Pfeiffer, Daniele
+    Gobbetti, Frank Slezak, jcrode, Johann C. Rode, Julien Pivotto, Kevin Richter,
+    Sergio Lopez, Steffen Liebergeld, Uwe Hermann
 
     This file is part of Gadgetbridge.
 
@@ -65,6 +65,7 @@ import nodomain.freeyourgadget.gadgetbridge.model.NotificationType;
 import nodomain.freeyourgadget.gadgetbridge.model.Weather;
 import nodomain.freeyourgadget.gadgetbridge.model.WeatherSpec;
 import nodomain.freeyourgadget.gadgetbridge.service.serial.GBDeviceProtocol;
+import nodomain.freeyourgadget.gadgetbridge.util.GB;
 
 public class PebbleProtocol extends GBDeviceProtocol {
 
@@ -396,6 +397,9 @@ public class PebbleProtocol extends GBDeviceProtocol {
     private static final UUID UUID_ZALEWSZCZAK_TALLY = UUID.fromString("abb51965-52e2-440a-b93c-843eeacb697d");
     private static final UUID UUID_OBSIDIAN = UUID.fromString("ef42caba-0c65-4879-ab23-edd2bde68824");
     private static final UUID UUID_SIMPLY_LIGHT = UUID.fromString("04a6e68a-42d6-4738-87b2-1c80a994dee4");
+    private static final UUID UUID_M7S = UUID.fromString("03adc57a-569b-4669-9a80-b505eaea314d");
+    private static final UUID UUID_YWEATHER = UUID.fromString("35a28a4d-0c9f-408f-9c6d-551e65f03186");
+    private static final UUID UUID_REALWEATHER = UUID.fromString("1f0b0701-cc8f-47ec-86e7-7181397f9a52");
 
     private static final UUID UUID_ZERO = new UUID(0, 0);
 
@@ -422,6 +426,9 @@ public class PebbleProtocol extends GBDeviceProtocol {
             mAppMessageHandlers.put(UUID_OBSIDIAN, new AppMessageHandlerObsidian(UUID_OBSIDIAN, PebbleProtocol.this));
             mAppMessageHandlers.put(UUID_GBPEBBLE, new AppMessageHandlerGBPebble(UUID_GBPEBBLE, PebbleProtocol.this));
             mAppMessageHandlers.put(UUID_SIMPLY_LIGHT, new AppMessageHandlerSimplyLight(UUID_SIMPLY_LIGHT, PebbleProtocol.this));
+            mAppMessageHandlers.put(UUID_M7S, new AppMessageHandlerM7S(UUID_M7S, PebbleProtocol.this));
+            mAppMessageHandlers.put(UUID_YWEATHER, new AppMessageHandlerRealWeather(UUID_YWEATHER, PebbleProtocol.this));
+            mAppMessageHandlers.put(UUID_REALWEATHER, new AppMessageHandlerRealWeather(UUID_REALWEATHER, PebbleProtocol.this));
         }
     }
 
@@ -1468,7 +1475,7 @@ public class PebbleProtocol extends GBDeviceProtocol {
     }
 
     @Override
-    public byte[] encodeReboot() {
+    public byte[] encodeReset(int flags) {
         return encodeSimpleMessage(ENDPOINT_RESET, RESET_REBOOT);
     }
 
@@ -2150,7 +2157,12 @@ public class PebbleProtocol extends GBDeviceProtocol {
                 break;
             case APPRUNSTATE_STOP:
                 LOG.info(ENDPOINT_NAME + ": stopped " + uuid);
-                break;
+
+                GBDeviceEventAppManagement gbDeviceEventAppManagement = new GBDeviceEventAppManagement();
+                gbDeviceEventAppManagement.uuid = uuid;
+                gbDeviceEventAppManagement.type = GBDeviceEventAppManagement.EventType.STOP;
+                gbDeviceEventAppManagement.event = GBDeviceEventAppManagement.Event.SUCCESS;
+                return new GBDeviceEvent[]{gbDeviceEventAppManagement};
             default:
                 LOG.info(ENDPOINT_NAME + ": (cmd:" + command + ")" + uuid);
                 break;
@@ -2257,6 +2269,9 @@ public class PebbleProtocol extends GBDeviceProtocol {
                         dataLogging.appUUID = datalogSession.uuid;
                         dataLogging.tag = datalogSession.tag;
                         devEvtsDataLogging = new GBDeviceEvent[]{dataLogging, null};
+                    }
+                    if (datalogSession.uuid.equals(UUID_ZERO) && (datalogSession.tag == 81 || datalogSession.tag == 83 || datalogSession.tag == 84)) {
+                        GB.signalActivityDataFinish();
                     }
                     mDatalogSessions.remove(id);
                 }

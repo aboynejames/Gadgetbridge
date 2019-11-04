@@ -1,7 +1,8 @@
-/*  Copyright (C) 2015-2018 Andreas Shimokawa, Avamander, Carsten Pfeiffer,
-    dakhnod, Daniele Gobbetti, Daniel Hauck, Frank Slezak, ivanovlev, João Paulo
-    Barraca, Julien Pivotto, Kasha, Martin, Sergey Trofimov, Steffen Liebergeld,
-    Taavi Eomäe, Uwe Hermann
+/*  Copyright (C) 2015-2019 Andreas Shimokawa, Avamander, Carsten Pfeiffer,
+    dakhnod, Daniele Gobbetti, Daniel Hauck, Dikay900, Frank Slezak, ivanovlev,
+    João Paulo Barraca, José Rebelo, Julien Pivotto, Kasha, Martin, Matthieu
+    Baerts, Sebastian Kranz, Sergey Trofimov, Steffen Liebergeld, Taavi Eomäe,
+    Uwe Hermann
 
     This file is part of Gadgetbridge.
 
@@ -33,10 +34,11 @@ import android.content.pm.PackageManager;
 import android.net.Uri;
 import android.os.Handler;
 import android.os.IBinder;
-import android.support.annotation.Nullable;
-import android.support.v4.content.ContextCompat;
-import android.support.v4.content.LocalBroadcastManager;
 import android.widget.Toast;
+
+import androidx.annotation.Nullable;
+import androidx.core.content.ContextCompat;
+import androidx.localbroadcastmanager.content.LocalBroadcastManager;
 
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
@@ -49,12 +51,14 @@ import nodomain.freeyourgadget.gadgetbridge.GBApplication;
 import nodomain.freeyourgadget.gadgetbridge.R;
 import nodomain.freeyourgadget.gadgetbridge.activities.HeartRateUtils;
 import nodomain.freeyourgadget.gadgetbridge.devices.DeviceCoordinator;
+import nodomain.freeyourgadget.gadgetbridge.devices.huami.HuamiCoordinator;
 import nodomain.freeyourgadget.gadgetbridge.externalevents.AlarmClockReceiver;
 import nodomain.freeyourgadget.gadgetbridge.externalevents.AlarmReceiver;
 import nodomain.freeyourgadget.gadgetbridge.externalevents.BluetoothConnectReceiver;
 import nodomain.freeyourgadget.gadgetbridge.externalevents.BluetoothPairingRequestReceiver;
 import nodomain.freeyourgadget.gadgetbridge.externalevents.CMWeatherReceiver;
 import nodomain.freeyourgadget.gadgetbridge.externalevents.CalendarReceiver;
+import nodomain.freeyourgadget.gadgetbridge.externalevents.LineageOsWeatherReceiver;
 import nodomain.freeyourgadget.gadgetbridge.externalevents.MusicPlaybackReceiver;
 import nodomain.freeyourgadget.gadgetbridge.externalevents.OmniJawsObserver;
 import nodomain.freeyourgadget.gadgetbridge.externalevents.PebbleReceiver;
@@ -73,9 +77,11 @@ import nodomain.freeyourgadget.gadgetbridge.model.NotificationType;
 import nodomain.freeyourgadget.gadgetbridge.model.WeatherSpec;
 import nodomain.freeyourgadget.gadgetbridge.service.receivers.GBAutoFetchReceiver;
 import nodomain.freeyourgadget.gadgetbridge.util.DeviceHelper;
+import nodomain.freeyourgadget.gadgetbridge.util.EmojiConverter;
 import nodomain.freeyourgadget.gadgetbridge.util.GB;
 import nodomain.freeyourgadget.gadgetbridge.util.GBPrefs;
 import nodomain.freeyourgadget.gadgetbridge.util.Prefs;
+import nodomain.freeyourgadget.gadgetbridge.util.StringUtils;
 
 import static nodomain.freeyourgadget.gadgetbridge.model.DeviceService.ACTION_ADD_CALENDAREVENT;
 import static nodomain.freeyourgadget.gadgetbridge.model.DeviceService.ACTION_APP_CONFIGURE;
@@ -94,10 +100,11 @@ import static nodomain.freeyourgadget.gadgetbridge.model.DeviceService.ACTION_FI
 import static nodomain.freeyourgadget.gadgetbridge.model.DeviceService.ACTION_HEARTRATE_TEST;
 import static nodomain.freeyourgadget.gadgetbridge.model.DeviceService.ACTION_INSTALL;
 import static nodomain.freeyourgadget.gadgetbridge.model.DeviceService.ACTION_NOTIFICATION;
-import static nodomain.freeyourgadget.gadgetbridge.model.DeviceService.ACTION_REBOOT;
+import static nodomain.freeyourgadget.gadgetbridge.model.DeviceService.ACTION_READ_CONFIGURATION;
 import static nodomain.freeyourgadget.gadgetbridge.model.DeviceService.ACTION_REQUEST_APPINFO;
 import static nodomain.freeyourgadget.gadgetbridge.model.DeviceService.ACTION_REQUEST_DEVICEINFO;
 import static nodomain.freeyourgadget.gadgetbridge.model.DeviceService.ACTION_REQUEST_SCREENSHOT;
+import static nodomain.freeyourgadget.gadgetbridge.model.DeviceService.ACTION_RESET;
 import static nodomain.freeyourgadget.gadgetbridge.model.DeviceService.ACTION_SEND_CONFIGURATION;
 import static nodomain.freeyourgadget.gadgetbridge.model.DeviceService.ACTION_SEND_WEATHER;
 import static nodomain.freeyourgadget.gadgetbridge.model.DeviceService.ACTION_SETCANNEDMESSAGES;
@@ -160,6 +167,7 @@ import static nodomain.freeyourgadget.gadgetbridge.model.DeviceService.EXTRA_NOT
 import static nodomain.freeyourgadget.gadgetbridge.model.DeviceService.EXTRA_NOTIFICATION_TITLE;
 import static nodomain.freeyourgadget.gadgetbridge.model.DeviceService.EXTRA_NOTIFICATION_TYPE;
 import static nodomain.freeyourgadget.gadgetbridge.model.DeviceService.EXTRA_RECORDED_DATA_TYPES;
+import static nodomain.freeyourgadget.gadgetbridge.model.DeviceService.EXTRA_RESET_FLAGS;
 import static nodomain.freeyourgadget.gadgetbridge.model.DeviceService.EXTRA_URI;
 import static nodomain.freeyourgadget.gadgetbridge.model.DeviceService.EXTRA_VIBRATION_INTENSITY;
 import static nodomain.freeyourgadget.gadgetbridge.model.DeviceService.EXTRA_WEATHER;
@@ -174,6 +182,7 @@ public class DeviceCommunicationService extends Service implements SharedPrefere
     private DeviceSupportFactory mFactory;
     private GBDevice mGBDevice = null;
     private DeviceSupport mDeviceSupport;
+    private DeviceCoordinator mCoordinator = null;
 
     private PhoneCallReceiver mPhoneCallReceiver = null;
     private SMSReceiver mSMSReceiver = null;
@@ -188,8 +197,8 @@ public class DeviceCommunicationService extends Service implements SharedPrefere
     private AlarmReceiver mAlarmReceiver = null;
     private CalendarReceiver mCalendarReceiver = null;
     private CMWeatherReceiver mCMWeatherReceiver = null;
+    private LineageOsWeatherReceiver mLineageOsWeatherReceiver = null;
     private OmniJawsObserver mOmniJawsObserver = null;
-    private Random mRandom = new Random();
 
     private final String[] mMusicActions = {
             "com.android.music.metachanged",
@@ -225,8 +234,9 @@ public class DeviceCommunicationService extends Service implements SharedPrefere
                 GBDevice device = intent.getParcelableExtra(GBDevice.EXTRA_DEVICE);
                 if (mGBDevice != null && mGBDevice.equals(device)) {
                     mGBDevice = device;
+                    mCoordinator = DeviceHelper.getInstance().getCoordinator(device);
                     boolean enableReceivers = mDeviceSupport != null && (mDeviceSupport.useAutoConnect() || mGBDevice.isInitialized());
-                    setReceiversEnableState(enableReceivers, mGBDevice.isInitialized(), DeviceHelper.getInstance().getCoordinator(device));
+                    setReceiversEnableState(enableReceivers, mGBDevice.isInitialized(), mCoordinator);
                 } else {
                     LOG.error("Got ACTION_DEVICE_CHANGED from unexpected device: " + device);
                 }
@@ -351,6 +361,23 @@ public class DeviceCommunicationService extends Service implements SharedPrefere
         return START_STICKY;
     }
 
+    /**
+     * @param text original text
+     * @return 'text' or a new String without non supported chars like emoticons, etc.
+     */
+    private String sanitizeNotifText(String text) {
+        if (text == null || text.length() == 0)
+            return text;
+
+        text = mDeviceSupport.customStringFilter(text);
+
+        if (!mCoordinator.supportsUnicodeEmojis()) {
+            return EmojiConverter.convertUnicodeEmojiToAscii(text, getApplicationContext());
+        }
+
+        return text;
+    }
+
     private void handleAction(Intent intent, String action, Prefs prefs) {
         switch (action) {
             case ACTION_REQUEST_DEVICEINFO:
@@ -360,10 +387,10 @@ public class DeviceCommunicationService extends Service implements SharedPrefere
                 int desiredId = intent.getIntExtra(EXTRA_NOTIFICATION_ID, -1);
                 NotificationSpec notificationSpec = new NotificationSpec(desiredId);
                 notificationSpec.phoneNumber = intent.getStringExtra(EXTRA_NOTIFICATION_PHONENUMBER);
-                notificationSpec.sender = intent.getStringExtra(EXTRA_NOTIFICATION_SENDER);
-                notificationSpec.subject = intent.getStringExtra(EXTRA_NOTIFICATION_SUBJECT);
-                notificationSpec.title = intent.getStringExtra(EXTRA_NOTIFICATION_TITLE);
-                notificationSpec.body = intent.getStringExtra(EXTRA_NOTIFICATION_BODY);
+                notificationSpec.sender = sanitizeNotifText(intent.getStringExtra(EXTRA_NOTIFICATION_SENDER));
+                notificationSpec.subject = sanitizeNotifText(intent.getStringExtra(EXTRA_NOTIFICATION_SUBJECT));
+                notificationSpec.title = sanitizeNotifText(intent.getStringExtra(EXTRA_NOTIFICATION_TITLE));
+                notificationSpec.body = sanitizeNotifText(intent.getStringExtra(EXTRA_NOTIFICATION_BODY));
                 notificationSpec.sourceName = intent.getStringExtra(EXTRA_NOTIFICATION_SOURCENAME);
                 notificationSpec.type = (NotificationType) intent.getSerializableExtra(EXTRA_NOTIFICATION_TYPE);
                 notificationSpec.attachedActions = (ArrayList<NotificationSpec.Action>) intent.getSerializableExtra(EXTRA_NOTIFICATION_ACTIONS);
@@ -404,9 +431,9 @@ public class DeviceCommunicationService extends Service implements SharedPrefere
                 calendarEventSpec.type = intent.getByteExtra(EXTRA_CALENDAREVENT_TYPE, (byte) -1);
                 calendarEventSpec.timestamp = intent.getIntExtra(EXTRA_CALENDAREVENT_TIMESTAMP, -1);
                 calendarEventSpec.durationInSeconds = intent.getIntExtra(EXTRA_CALENDAREVENT_DURATION, -1);
-                calendarEventSpec.title = intent.getStringExtra(EXTRA_CALENDAREVENT_TITLE);
-                calendarEventSpec.description = intent.getStringExtra(EXTRA_CALENDAREVENT_DESCRIPTION);
-                calendarEventSpec.location = intent.getStringExtra(EXTRA_CALENDAREVENT_LOCATION);
+                calendarEventSpec.title = sanitizeNotifText(intent.getStringExtra(EXTRA_CALENDAREVENT_TITLE));
+                calendarEventSpec.description = sanitizeNotifText(intent.getStringExtra(EXTRA_CALENDAREVENT_DESCRIPTION));
+                calendarEventSpec.location = sanitizeNotifText(intent.getStringExtra(EXTRA_CALENDAREVENT_LOCATION));
                 mDeviceSupport.onAddCalendarEvent(calendarEventSpec);
                 break;
             }
@@ -416,8 +443,9 @@ public class DeviceCommunicationService extends Service implements SharedPrefere
                 mDeviceSupport.onDeleteCalendarEvent(type, id);
                 break;
             }
-            case ACTION_REBOOT: {
-                mDeviceSupport.onReboot();
+            case ACTION_RESET: {
+                int flags = intent.getIntExtra(EXTRA_RESET_FLAGS, 0);
+                mDeviceSupport.onReset(flags);
                 break;
             }
             case ACTION_HEARTRATE_TEST: {
@@ -438,6 +466,7 @@ public class DeviceCommunicationService extends Service implements SharedPrefere
                 setReceiversEnableState(false, false, null);
                 mGBDevice = null;
                 mDeviceSupport = null;
+                mCoordinator = null;
                 break;
             }
             case ACTION_FIND_DEVICE: {
@@ -454,7 +483,7 @@ public class DeviceCommunicationService extends Service implements SharedPrefere
                 CallSpec callSpec = new CallSpec();
                 callSpec.command = intent.getIntExtra(EXTRA_CALL_COMMAND, CallSpec.CALL_UNDEFINED);
                 callSpec.number = intent.getStringExtra(EXTRA_CALL_PHONENUMBER);
-                callSpec.name = intent.getStringExtra(EXTRA_CALL_DISPLAYNAME);
+                callSpec.name = sanitizeNotifText(intent.getStringExtra(EXTRA_CALL_DISPLAYNAME));
                 mDeviceSupport.onSetCallState(callSpec);
                 break;
             case ACTION_SETCANNEDMESSAGES:
@@ -471,9 +500,9 @@ public class DeviceCommunicationService extends Service implements SharedPrefere
                 break;
             case ACTION_SETMUSICINFO:
                 MusicSpec musicSpec = new MusicSpec();
-                musicSpec.artist = intent.getStringExtra(EXTRA_MUSIC_ARTIST);
-                musicSpec.album = intent.getStringExtra(EXTRA_MUSIC_ALBUM);
-                musicSpec.track = intent.getStringExtra(EXTRA_MUSIC_TRACK);
+                musicSpec.artist = sanitizeNotifText(intent.getStringExtra(EXTRA_MUSIC_ARTIST));
+                musicSpec.album = sanitizeNotifText(intent.getStringExtra(EXTRA_MUSIC_ALBUM));
+                musicSpec.track = sanitizeNotifText(intent.getStringExtra(EXTRA_MUSIC_TRACK));
                 musicSpec.duration = intent.getIntExtra(EXTRA_MUSIC_DURATION, 0);
                 musicSpec.trackCount = intent.getIntExtra(EXTRA_MUSIC_TRACKCOUNT, 0);
                 musicSpec.trackNr = intent.getIntExtra(EXTRA_MUSIC_TRACKNR, 0);
@@ -528,7 +557,7 @@ public class DeviceCommunicationService extends Service implements SharedPrefere
                 }
                 break;
             case ACTION_SET_ALARMS:
-                ArrayList<Alarm> alarms = intent.getParcelableArrayListExtra(EXTRA_ALARMS);
+                ArrayList<? extends Alarm> alarms = (ArrayList<? extends Alarm>) intent.getSerializableExtra(EXTRA_ALARMS);
                 mDeviceSupport.onSetAlarms(alarms);
                 break;
             case ACTION_ENABLE_REALTIME_STEPS: {
@@ -554,6 +583,11 @@ public class DeviceCommunicationService extends Service implements SharedPrefere
             case ACTION_SEND_CONFIGURATION: {
                 String config = intent.getStringExtra(EXTRA_CONFIG);
                 mDeviceSupport.onSendConfiguration(config);
+                break;
+            }
+            case ACTION_READ_CONFIGURATION: {
+                String config = intent.getStringExtra(EXTRA_CONFIG);
+                mDeviceSupport.onReadConfiguration(config);
                 break;
             }
             case ACTION_TEST_NEW_FUNCTION: {
@@ -593,9 +627,11 @@ public class DeviceCommunicationService extends Service implements SharedPrefere
             mDeviceSupport.dispose();
             mDeviceSupport = null;
             mGBDevice = null;
+            mCoordinator = null;
         }
         mDeviceSupport = deviceSupport;
         mGBDevice = mDeviceSupport != null ? mDeviceSupport.getDevice() : null;
+        mCoordinator = mGBDevice != null ? DeviceHelper.getInstance().getCoordinator(mGBDevice) : null;
     }
 
     private void start() {
@@ -657,6 +693,7 @@ public class DeviceCommunicationService extends Service implements SharedPrefere
                 IntentFilter filter = new IntentFilter();
                 filter.addAction("android.intent.action.PHONE_STATE");
                 filter.addAction("android.intent.action.NEW_OUTGOING_CALL");
+                filter.addAction("nodomain.freeyourgadget.gadgetbridge.MUTE_CALL");
                 registerReceiver(mPhoneCallReceiver, filter);
             }
             if (mSMSReceiver == null) {
@@ -703,10 +740,17 @@ public class DeviceCommunicationService extends Service implements SharedPrefere
                 mCMWeatherReceiver = new CMWeatherReceiver();
                 registerReceiver(mCMWeatherReceiver, new IntentFilter("GB_UPDATE_WEATHER"));
             }
+            if (GBApplication.isRunningOreoOrLater()) {
+                if (mLineageOsWeatherReceiver == null && coordinator != null && coordinator.supportsWeather()) {
+
+                    mLineageOsWeatherReceiver = new LineageOsWeatherReceiver();
+                    registerReceiver(mLineageOsWeatherReceiver, new IntentFilter("GB_UPDATE_WEATHER"));
+                }
+            }
             if (mOmniJawsObserver == null && coordinator != null && coordinator.supportsWeather()) {
                 try {
                     mOmniJawsObserver = new OmniJawsObserver(new Handler());
-                    getContentResolver().registerContentObserver(mOmniJawsObserver.WEATHER_URI, true, mOmniJawsObserver);
+                    getContentResolver().registerContentObserver(OmniJawsObserver.WEATHER_URI, true, mOmniJawsObserver);
                 } catch (PackageManager.NameNotFoundException e) {
                     //Nothing wrong, it just means we're not running on omnirom.
                 }
@@ -753,6 +797,10 @@ public class DeviceCommunicationService extends Service implements SharedPrefere
             if (mCMWeatherReceiver != null) {
                 unregisterReceiver(mCMWeatherReceiver);
                 mCMWeatherReceiver = null;
+            }
+            if (mLineageOsWeatherReceiver != null) {
+                unregisterReceiver(mLineageOsWeatherReceiver);
+                mLineageOsWeatherReceiver = null;
             }
             if (mOmniJawsObserver != null) {
                 getContentResolver().unregisterContentObserver(mOmniJawsObserver);
