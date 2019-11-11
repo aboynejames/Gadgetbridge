@@ -98,13 +98,15 @@ public class DbManagementActivity extends AbstractGBActivity {
     private Button deleteDBButton;
     private Button firstDBButton;
     private Button syncDBButton;
+    private Button updateKey;
+    private Boolean updatePKstate = false;
     private Button tokenButton;
     private Button pubkeyButton;
     private TextView dbPath;
     private RequestQueue mRequestQueue;
     private StringRequest mStringRequest;
-    private String url = "http://165.227.244.213:8882";//"http://188.166.138.93:8882/";
-    private String urlsave = "http://165.227.244.213:8882/datamsave/";//"http:// 188.166.138.93:8882/datamsave/";
+    private String url = "http://165.227.244.213:8882";
+    private String urlsave = "http://165.227.244.213:8882/datamsave/";
     private String urldevice = "http://165.227.244.213:8882/devicesave/";
     private String urlsync = "http://165.227.244.213:8882/sync/";
     private String urltoken;
@@ -147,6 +149,46 @@ public class DbManagementActivity extends AbstractGBActivity {
             @Override
             public void onClick(View v) {
                 importDB();
+            }
+        });
+
+        // update key or token button pressed
+        updateKey = findViewById(R.id.updatekey);
+        updateKey.setOnClickListener(new View.OnClickListener() {
+            @Override
+            public void onClick(View v) {
+                // change update Key to close
+                Toast.makeText(getApplicationContext(), v.toString(), Toast.LENGTH_LONG).show();
+                if (updatePKstate == false) {
+                    TextView updateStatus = (TextView) findViewById(R.id.updatekey);
+                    updateStatus.setText("Close update");
+                    // show the publicy address and token
+                    // call public address
+                    String currPK = queryToken("2");
+                    // get token from app
+                    // form token URL  check if saved token
+                    String currTok = queryToken("1");
+                    TextView lpubkey = (TextView) findViewById(R.id.publickey);
+                    lpubkey.setText(currPK);
+                    TextView ltoken = (TextView) findViewById(R.id.tokenText);
+                    ltoken.setText(currTok);
+                    // show the buttons to update
+                    tokenButton.setVisibility(View.VISIBLE);
+                    pubkeyButton.setVisibility(View.VISIBLE);
+                    updatePKstate = true;
+                } else {
+                    // remove the forms and update button text
+                    TextView updateStatus2 = (TextView) findViewById(R.id.updatekey);
+                    updateStatus2.setText("Update keys");
+                    updatePKstate = false;
+                    tokenButton.setVisibility(View.INVISIBLE);
+                    pubkeyButton.setVisibility(View.INVISIBLE);
+                    TextView lpubkey2 = (TextView) findViewById(R.id.publickey);
+                    lpubkey2.setText("");
+                    TextView ltoken2 = (TextView) findViewById(R.id.tokenText);
+                    ltoken2.setText("");
+
+                }
             }
         });
 
@@ -345,7 +387,6 @@ public class DbManagementActivity extends AbstractGBActivity {
     private void startStatus() {
         // has the starting addtional sqlite tables been added?
         String status = queryToken("3");
-        // Toast.makeText(getApplicationContext(),"status start: " + status, Toast.LENGTH_LONG).show();
         if(Objects.equals(status, "true")) {
             // display sync button
             firstDBButton = findViewById(R.id.firstDBButton);
@@ -378,8 +419,10 @@ public class DbManagementActivity extends AbstractGBActivity {
                 // first check there is interenet connection
                 boolean InternetOn = isNetworkConnected();
                 if(InternetOn == true) {
-                    Toast.makeText(getApplicationContext(),"FIRST SETUP CLICKED", Toast.LENGTH_LONG).show();
-                        firstSettingsDB();
+                    // Toast.makeText(getApplicationContext(),"FIRST SETUP CLICKED", Toast.LENGTH_LONG).show();
+                    firstSettingsDB();
+                    TextView tv2 = (TextView) findViewById(R.id.syncDate);
+                    tv2.setText("First time setup complete");
                 }
                 else {
                     Toast.makeText(getApplicationContext(),"NO INTERNET CONNECTION", Toast.LENGTH_LONG).show();
@@ -477,7 +520,8 @@ public class DbManagementActivity extends AbstractGBActivity {
             SQLiteDatabase db = sqLiteOpenHelper.getReadableDatabase();
             GB.toast(this, "getting ready for sync", Toast.LENGTH_LONG, GB.INFO);
             // PUBLICKEY AND DATA COMPUTATIONAL REFERENCE - BOTH HASHES
-            String publickeyIN = queryToken("2");
+            String publickeyIN;
+            publickeyIN = queryToken("2");
             String comref = comrefIN;
             // get token from app
             // form token URL  check if saved token
@@ -835,6 +879,7 @@ public class DbManagementActivity extends AbstractGBActivity {
 
     private boolean SaveUpdateToken(String tokenIN, String tidIN){
         String localtoken = tokenIN.toString();
+        Toast.makeText(this, "first setup start", Toast.LENGTH_SHORT).show();
         boolean tableExists = false;
         try (DBHandler dbHandler = GBApplication.acquireDB())
         {
@@ -855,15 +900,15 @@ public class DbManagementActivity extends AbstractGBActivity {
                     if(tidIN == "1") {
                         // then update the table with the new token/key
                         db.execSQL("UPDATE TOKEN SET hashtoken = '" + tokenIN + "' WHERE TID = 1");
-                        // Toast.makeText(this, "second UPDATED TOKEN", Toast.LENGTH_SHORT).show();
+                        Toast.makeText(this, "second UPDATED TOKEN", Toast.LENGTH_SHORT).show();
                     }
                     else if(tidIN == "2") {
                         db.execSQL("UPDATE TOKEN SET hashtoken = '" + tokenIN + "' WHERE TID = 2");
-                        // Toast.makeText(this, "second UPDATED PUBKEY", Toast.LENGTH_SHORT).show();
+                        Toast.makeText(this, "second UPDATED PUBKEY", Toast.LENGTH_SHORT).show();
                     }
                     else if(tidIN == "3") {
                         db.execSQL("UPDATE TOKEN SET hashtoken = '" + tokenIN + "' WHERE TID = 3");
-                        // Toast.makeText(this, "device data saved to network", Toast.LENGTH_SHORT).show();
+                        Toast.makeText(this, "device data saved to network", Toast.LENGTH_SHORT).show();
                     }
                 }
             } catch (Exception e) {
@@ -875,18 +920,18 @@ public class DbManagementActivity extends AbstractGBActivity {
                 if(tableExists == true) {
                     // insert first sync date
                     db.execSQL("INSERT INTO TOKEN(TID, hashtoken) VALUES (1, '" + localtoken + "' )");
-                    // Toast.makeText(this, "insert first TOKEN", Toast.LENGTH_LONG).show();
+                    Toast.makeText(this, "insert first TOKEN", Toast.LENGTH_LONG).show();
                     db.execSQL("INSERT INTO TOKEN(TID, hashtoken) VALUES (2, '0000000' )");
-                    // Toast.makeText(this, "insert blank publickey", Toast.LENGTH_LONG).show();
+                    Toast.makeText(this, "insert blank publickey", Toast.LENGTH_LONG).show();
                     db.execSQL("INSERT INTO TOKEN(TID, hashtoken) VALUES (3, 'false' )");
-                    // Toast.makeText(this, "setup tables", Toast.LENGTH_LONG).show();
+                    Toast.makeText(this, "setup tables", Toast.LENGTH_LONG).show();
                 }
             }
         } catch (Exception e) {
             e.printStackTrace();
             GB.toast(this, "setup" + e.toString(), Toast.LENGTH_LONG, GB.ERROR, e);
-            //TextView stv=(TextView)findViewById(R.id.syncDate);
-            //stv.setText("insert token" + e.toString());
+            TextView stv=(TextView)findViewById(R.id.syncDate);
+            stv.setText("insert token" + e.toString());
             return false;
         }
 

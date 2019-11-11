@@ -20,35 +20,6 @@
             grid:alignmentMode="alignBounds"
             grid:columnCount="2">
 
-            <TextView
-                android:id="@+id/exportImportLabel"
-                android:layout_width="wrap_content"
-                android:layout_height="wrap_content"
-                android:text="@string/activity_db_management_exportimport_label"
-                android:textAppearance="?android:attr/textAppearanceMedium"
-                android:textColor="@color/accent"
-                grid:layout_columnSpan="2"
-                grid:layout_columnWeight="1" />
-
-
-            <TextView
-                android:id="@+id/db_management_intro"
-                android:layout_width="fill_parent"
-                android:layout_height="wrap_content"
-                android:text="@string/activity_db_management_import_export_explanation"
-                android:textAppearance="?android:attr/textAppearanceSmall"
-                grid:layout_columnSpan="2"
-                grid:layout_columnWeight="1" />
-
-            <TextView
-                android:id="@+id/activity_db_management_path"
-                android:layout_width="fill_parent"
-                android:layout_height="wrap_content"
-                android:textAppearance="?android:attr/textAppearanceSmall"
-                android:textStyle="bold"
-                grid:layout_columnSpan="2"
-                grid:layout_columnWeight="1" />
-
 
             <Button
                 android:id="@+id/firstDBButton"
@@ -94,6 +65,15 @@
                 grid:layout_columnSpan="2"
                 grid:layout_columnWeight="1" />
 
+            <Button
+                android:id="@+id/updatekey"
+                android:layout_width="wrap_content"
+                android:layout_height="wrap_content"
+                android:layout_marginTop="40dp"
+                android:text="Update key"
+                grid:layout_columnSpan="2"
+                grid:layout_columnWeight="1" />
+
             <EditText
                 android:id="@+id/publickey"
                 android:layout_width="180dp"
@@ -119,6 +99,34 @@
                 android:layout_height="wrap_content"
                 android:layout_marginTop="40dp"
                 android:text="Save token" />
+
+            <TextView
+                android:id="@+id/db_management_intro"
+                android:layout_width="fill_parent"
+                android:layout_height="wrap_content"
+                android:text="@string/activity_db_management_import_export_explanation"
+                android:textAppearance="?android:attr/textAppearanceSmall"
+                grid:layout_columnSpan="2"
+                grid:layout_columnWeight="1" />
+
+            <TextView
+                android:id="@+id/exportImportLabel"
+                android:layout_width="wrap_content"
+                android:layout_height="wrap_content"
+                android:text="@string/activity_db_management_exportimport_label"
+                android:textAppearance="?android:attr/textAppearanceMedium"
+                android:textColor="@color/accent"
+                grid:layout_columnSpan="2"
+                grid:layout_columnWeight="1" />
+
+            <TextView
+                android:id="@+id/activity_db_management_path"
+                android:layout_width="fill_parent"
+                android:layout_height="wrap_content"
+                android:textAppearance="?android:attr/textAppearanceSmall"
+                android:textStyle="bold"
+                grid:layout_columnSpan="2"
+                grid:layout_columnWeight="1" />
 
             <Button
                 android:id="@+id/exportDBButton"
