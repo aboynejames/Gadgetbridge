@@ -388,6 +388,12 @@
             android:screenOrientation="portrait"
             android:windowSoftInputMode="stateHidden" />
         <activity
+            android:name=".activities.HealthspanAnalysis"
+            android:label="Healthspan"
+            android:parentActivityName=".activities.ControlCenterv2"
+            android:screenOrientation="portrait"
+            android:windowSoftInputMode="stateHidden" />
+        <activity
             android:name=".activities.DiscoveryActivity"
             android:label="@string/title_activity_discovery"
             android:parentActivityName=".activities.ControlCenterv2" />

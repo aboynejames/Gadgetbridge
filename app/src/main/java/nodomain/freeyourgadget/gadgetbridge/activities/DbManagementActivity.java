@@ -29,7 +29,7 @@ import android.net.ConnectivityManager;
 import android.net.NetworkInfo;
 import android.os.Bundle;
 import android.preference.PreferenceManager;
-import android.support.v4.app.NavUtils;
+import androidx.core.app.NavUtils;
 import android.util.Log;
 import android.database.sqlite.SQLiteOpenHelper;
 import android.net.Uri;
